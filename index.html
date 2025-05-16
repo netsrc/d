@@ -13,31 +13,49 @@
 <body>
 
 <div id="login">
-  <h2>Enter Password</h2>
-  <input type="password" id="password" />
-  <button onclick="checkPassword()">Login</button>
+  <h2>What's the password? (If you cannot get it you are not worthy)</h2>
+  <input type="password" id="password" placeholder="Hint: It's not obvious..." />
+  <button onclick="checkPassword()">Enter</button>
 </div>
 
 <div id="browser" class="hidden">
   <h1>📁 File Browser</h1>
-
-  <h3>/files</h3>
-  <a href="/workspaces/fileconverter.github.com/files/Emjs/index.html" target="_blank">Emulatorjs</a>
-
-  <h3>/public/docs</h3>
-  <a href="public/docs/file.pdf" target="_blank">📄 nothing.pdf dead link</a>
+  <div id="fileList">Loading files...</div>
 </div>
 
 <script>
-  const PASSWORD = "Easygame"; // change this to your password
+  const PASSWORD = "Easygame"; // Soft gate — anyone can see this if they look
 
   function checkPassword() {
-    const input = document.getElementById("password").value;
+    const input = document.getElementById("password").value.trim();
     if (input === PASSWORD) {
       document.getElementById("login").classList.add("hidden");
       document.getElementById("browser").classList.remove("hidden");
+      loadFiles();
     } else {
-      alert("Incorrect password");
+      alert("Nope. Try again.");
+    }
+  }
+
+  async function loadFiles() {
+    const fileList = document.getElementById("fileList");
+    fileList.textContent = "Loading...";
+
+    try {
+      const res = await fetch('/list-files');
+      const files = await res.json();
+
+      fileList.innerHTML = "";
+      files.forEach(file => {
+        const link = document.createElement("a");
+        link.href = `/files/${file}`;
+        link.textContent = file;
+        link.target = "_blank";
+        fileList.appendChild(link);
+      });
+    } catch (e) {
+      fileList.textContent = "Failed to load files.";
+      console.error(e);
     }
   }
 </script>
