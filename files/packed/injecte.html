@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Live Code Editor with External Website</title>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: Arial, sans-serif;
+    }
+
+    .toolbar {
+      background: #4CAF50;
+      padding: 10px;
+      color: white;
+      display: flex;
+      align-items: center;
+    }
+
+    input[type="text"] {
+      padding: 6px;
+      margin-left: 10px;
+      width: 300px;
+      border: none;
+      border-radius: 4px;
+    }
+
+    button {
+      margin-left: 10px;
+      padding: 6px 12px;
+      font-weight: bold;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      background: white;
+      color: #4CAF50;
+    }
+
+    button:hover {
+      background: #e0f5e0;
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <label>Website:</label>
+    <input type="text" id="website" placeholder="https://example.com">
+    <button onclick="openInNewTab()">Open in New Tab</button>
+  </div>
+
+  <script>
+    function openInNewTab() {
+      const url = document.getElementById('website').value.trim();
+      if (!url) {
+        alert('Please enter a valid URL.');
+        return;
+      }
+
+      const win = window.open('', '_blank');
+
+      const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Preview: ${url}</title>
+          <style>
+            body, html {
+              margin: 0;
+              height: 100%;
+              display: flex;
+              flex-direction: column;
+              background: #000;
+              color: #0f0;
+              font-family: monospace;
+            }
+            iframe {
+              flex: 1;
+              width: 100%;
+              border: none;
+            }
+            #console {
+              background: #111;
+              color: #0f0;
+              padding: 10px;
+              height: 150px;
+              overflow-y: auto;
+              border-top: 1px solid #333;
+            }
+            #input {
+              width: 100%;
+              box-sizing: border-box;
+              border: none;
+              outline: none;
+              font-family: monospace;
+              font-size: 14px;
+              padding: 8px;
+              background: #000;
+              color: #0f0;
+            }
+          </style>
+        </head>
+        <body>
+          <iframe id="siteFrame" src="${url}"></iframe>
+          <div id="console">
+            <input id="input" placeholder="Type JavaScript here and press Enter">
+          </div>
+
+          <script>
+            const iframe = document.getElementById('siteFrame');
+            const input = document.getElementById('input');
+            const consoleDiv = document.getElementById('console');
+
+            input.addEventListener('keydown', function(e) {
+              if (e.key === 'Enter') {
+                const code = input.value;
+                try {
+                  const result = iframe.contentWindow.eval(code);
+                  logToConsole('> ' + code + '\\n' + result);
+                } catch (err) {
+                  logToConsole('> ' + code + '\\n' + err, true);
+                }
+                input.value = '';
+              }
+            });
+
+            function logToConsole(text, isError = false) {
+              const p = document.createElement('pre');
+              p.textContent = text;
+              if (isError) p.style.color = 'red';
+              consoleDiv.insertBefore(p, input);
+              consoleDiv.scrollTop = consoleDiv.scrollHeight;
+            }
+          </script>
+        </body>
+        </html>
+      `;
+
+      win.document.open();
+      win.document.write(html);
+      win.document.close();
+    }
+  </script>
+</body>
+</html>
