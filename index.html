@@ -42,7 +42,7 @@
     fileList.textContent = "Loading...";
 
     try {
-      const res = await fetch('/list-files');
+      const res = await fetch('/workspaces/fileconvertertt/files/filelist.json');
       const files = await res.json();
 
       fileList.innerHTML = "";
