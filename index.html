@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Simple File Browser</title>
+  <style>
+    body { font-family: sans-serif; margin: 2rem; }
+    .hidden { display: none; }
+    a { display: block; margin: 5px 0; color: #0366d6; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+<div id="login">
+  <h2>Enter Password</h2>
+  <input type="password" id="password" />
+  <button onclick="checkPassword()">Login</button>
+</div>
+
+<div id="browser" class="hidden">
+  <h1>📁 File Browser</h1>
+
+  <h3>/files</h3>
+  <a href="index.html" target="_blank">Emulatorjs</a>
+
+  <h3>/public/docs</h3>
+  <a href="public/docs/file.pdf" target="_blank">📄 nothing.pdf dead link</a>
+</div>
+
+<script>
+  const PASSWORD = "Easygame"; // change this to your password
+
+  function checkPassword() {
+    const input = document.getElementById("password").value;
+    if (input === PASSWORD) {
+      document.getElementById("login").classList.add("hidden");
+      document.getElementById("browser").classList.remove("hidden");
+    } else {
+      alert("Incorrect password");
+    }
+  }
+</script>
+
+</body>
+</html>
