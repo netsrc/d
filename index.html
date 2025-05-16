@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>File Browser</title>
+  <style>
+    body { font-family: sans-serif; margin: 2rem; }
+    .hidden { display: none; }
+    a { display: block; margin: 5px 0; color: #0366d6; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+<div id="login">
+  <h2>Enter Password</h2>
+  <input type="password" id="password" />
+  <button onclick="checkPassword()">Enter</button>
+</div>
+
+<div id="browser" class="hidden">
+  <h1>📁 File Browser</h1>
+  <div id="fileList">Loading files...</div>
+</div>
+
+<script>
+  const PASSWORD = "easypass";
+  const FILELIST_URL = "https://netsrc.github.io/fileconvertertt/files/filelist.json";
+  const FILE_BASE_URL = "";
+
+  function checkPassword() {
+    const input = document.getElementById("password").value.trim();
+    if (input === PASSWORD) {
+      document.getElementById("login").classList.add("hidden");
+      document.getElementById("browser").classList.remove("hidden");
+      loadFiles();
+    } else {
+      alert("Incorrect password.");
+    }
+  }
+
+  async function loadFiles() {
+    const fileList = document.getElementById("fileList");
+    fileList.textContent = "Loading...";
+
+    try {
+      const res = await fetch(FILELIST_URL);
+      if (!res.ok) throw new Error("Failed to fetch file list");
+      const files = await res.json();
+
+      fileList.innerHTML = "";
+
+      files.forEach(file => {
+        const link = document.createElement("a");
+        link.href = FILE_BASE_URL + file;
+        link.textContent = file;
+        link.target = "_blank";
+        fileList.appendChild(link);
+      });
+    } catch (e) {
+      fileList.textContent = "Failed to load files.";
+      console.error(e);
+    }
+  }
+</script>
+
+</body>
+</html>
