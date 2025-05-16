@@ -106,7 +106,22 @@
         </div>
 
         <script>
-            let enableDebug = false;
+            let isDirty = true;
+
+// Mark dirty on any change to inputs, textareas, or selects
+document.addEventListener('input', () => {
+  isDirty = true;
+});
+
+// Warn before closing or refreshing the page
+window.addEventListener('beforeunload', (e) => {
+  if (isDirty) {
+    e.preventDefault();
+    e.returnValue = ''; // Required for showing the prompt
+  }
+});
+
+            let enableDebug = true;
             let enableThreads = false;
             const queryString = window.location.search;
             const urlParams = new URLSearchParams(queryString);
