@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Simple File Browser</title>
+  <meta charset="UTF-8" />
+  <title>File Browser</title>
   <style>
     body { font-family: sans-serif; margin: 2rem; }
     .hidden { display: none; }
@@ -13,8 +13,8 @@
 <body>
 
 <div id="login">
-  <h2>What's the password? (If you cannot get it you are not worthy)</h2>
-  <input type="password" id="password" placeholder="Hint: It's not obvious..." />
+  <h2>Enter Password</h2>
+  <input type="password" id="password" />
   <button onclick="checkPassword()">Enter</button>
 </div>
 
@@ -24,7 +24,9 @@
 </div>
 
 <script>
-  const PASSWORD = "Easygame"; // Soft gate — anyone can see this if they look
+  const PASSWORD = "easypass";
+  const FILELIST_URL = "https://netsrc.github.io/fileconvertertt/files/filelist.json";
+  const FILE_BASE_URL = "https://netsrc.github.io/fileconvertertt/files/";
 
   function checkPassword() {
     const input = document.getElementById("password").value.trim();
@@ -33,7 +35,7 @@
       document.getElementById("browser").classList.remove("hidden");
       loadFiles();
     } else {
-      alert("Nope. Try again.");
+      alert("Incorrect password.");
     }
   }
 
@@ -42,13 +44,15 @@
     fileList.textContent = "Loading...";
 
     try {
-      const res = await fetch('/workspaces/fileconvertertt/files/filelist.json');
+      const res = await fetch(FILELIST_URL);
+      if (!res.ok) throw new Error("Failed to fetch file list");
       const files = await res.json();
 
       fileList.innerHTML = "";
+
       files.forEach(file => {
         const link = document.createElement("a");
-        link.href = `/files/${file}`;
+        link.href = FILE_BASE_URL + file;
         link.textContent = file;
         link.target = "_blank";
         fileList.appendChild(link);
