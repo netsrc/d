@@ -1,0 +1,3459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VOID — Browser IDE</title>
+
+<!-- Monaco Editor -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/editor/editor.main.min.css">
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,700;1,400&family=Rajdhani:wght@500;600;700&display=swap');
+
+:root {
+  --bg0:       #080b0f;
+  --bg1:       #0d1117;
+  --bg2:       #111820;
+  --bg3:       #161f2b;
+  --bg4:       #1c2736;
+  --border:    #1e2d3d;
+  --border2:   #253545;
+  --accent:    #00d4ff;
+  --accent-dim:#0099bb;
+  --green:     #3ddc84;
+  --yellow:    #f0c040;
+  --red:       #ff4c6a;
+  --purple:    #c792ea;
+  --orange:    #ffb347;
+  --text:      #cdd9e5;
+  --text-dim:  #768a9e;
+  --text-faint:#3d5266;
+  --tab-h:     32px;
+  --sidebar-w: 220px;
+  --status-h:  22px;
+  --title-h:   36px;
+  --panel-h:   200px;
+  --glow:      0 0 10px rgba(0,212,255,0.25);
+  --glow-sm:   0 0 6px rgba(0,212,255,0.2);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; background: var(--bg0); color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+
+/* ── Scanlines ── */
+body::after {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 10000;
+  background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.03) 3px, rgba(0,0,0,0.03) 4px);
+}
+
+/* ══════════════════════════════════════════
+   TITLEBAR
+══════════════════════════════════════════ */
+#titlebar {
+  height: var(--title-h);
+  background: var(--bg1);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center;
+  padding: 0 12px; gap: 12px;
+  user-select: none; flex-shrink: 0;
+  position: relative; z-index: 200;
+}
+
+.title-logo {
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 700; font-size: 16px;
+  color: var(--accent); letter-spacing: 0.15em;
+  text-shadow: var(--glow);
+}
+.title-logo em { color: var(--text-dim); font-style: normal; font-size: 11px; margin-left: 6px; letter-spacing: 0; }
+
+.title-menu { display: flex; gap: 2px; margin-left: 8px; }
+.menu-item {
+  font-size: 12px; padding: 3px 10px; border-radius: 3px;
+  color: var(--text-dim); cursor: pointer; transition: all 0.1s;
+  position: relative;
+}
+.menu-item:hover { background: var(--bg3); color: var(--text); }
+
+/* dropdown */
+.menu-dropdown {
+  display: none; position: absolute; top: 100%; left: 0; min-width: 180px;
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: 4px; padding: 4px; z-index: 9999;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+}
+.menu-item:hover .menu-dropdown,
+.menu-item.open .menu-dropdown { display: block; }
+.menu-dropdown hr { border: none; border-top: 1px solid var(--border); margin: 3px 0; }
+.dd-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 5px 10px; border-radius: 3px; cursor: pointer; font-size: 11px;
+  color: var(--text); transition: background 0.1s; gap: 20px;
+}
+.dd-item:hover { background: var(--bg4); color: var(--accent); }
+.dd-item .kbd { color: var(--text-faint); font-size: 10px; white-space: nowrap; }
+
+.title-actions { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+.tbtn {
+  font-family: 'JetBrains Mono', monospace; font-size: 10px;
+  padding: 4px 12px; border-radius: 3px; cursor: pointer; transition: all 0.15s;
+  border: 1px solid; letter-spacing: 0.04em;
+}
+.tbtn-run  { background: var(--green);  color: #000; border-color: var(--green);  font-weight: 700; }
+.tbtn-run:hover  { box-shadow: 0 0 12px rgba(61,220,132,0.4); transform: translateY(-1px); }
+.tbtn-save { background: transparent; color: var(--accent); border-color: var(--accent-dim); }
+.tbtn-save:hover { background: rgba(0,212,255,0.08); box-shadow: var(--glow-sm); }
+.tbtn-popout { background: transparent; color: var(--purple); border-color: rgba(199,146,234,0.4); }
+.tbtn-popout:hover { background: rgba(199,146,234,0.08); box-shadow: 0 0 6px rgba(199,146,234,0.3); }
+.tbtn-dir { background: transparent; color: var(--yellow, #e5c07b); border-color: rgba(229,192,123,0.4); }
+.tbtn-dir:hover { background: rgba(229,192,123,0.08); }
+.tbtn-dir.dir-set { color: var(--green); border-color: var(--green); }
+
+/* ══════════════════════════════════════════
+   MAIN LAYOUT
+══════════════════════════════════════════ */
+#app {
+  display: flex;
+  height: calc(100vh - var(--title-h) - var(--status-h));
+}
+
+/* ══════════════════════════════════════════
+   ACTIVITY BAR
+══════════════════════════════════════════ */
+#activitybar {
+  width: 44px; background: var(--bg1); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; align-items: center;
+  padding: 8px 0; gap: 4px; flex-shrink: 0; z-index: 100;
+}
+.act-btn {
+  width: 34px; height: 34px; border-radius: 6px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-faint); font-size: 17px; transition: all 0.15s;
+  position: relative;
+}
+.act-btn:hover   { color: var(--text); background: var(--bg3); }
+.act-btn.active  { color: var(--accent); background: rgba(0,212,255,0.08); }
+.act-btn.active::before {
+  content: ''; position: absolute; left: -1px; top: 6px; bottom: 6px;
+  width: 2px; border-radius: 0 2px 2px 0; background: var(--accent);
+  box-shadow: var(--glow-sm);
+}
+
+/* ══════════════════════════════════════════
+   SIDEBAR
+══════════════════════════════════════════ */
+#sidebar {
+  width: var(--sidebar-w); background: var(--bg1);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; flex-shrink: 0;
+  overflow: hidden;
+}
+
+.sidebar-header {
+  padding: 8px 12px 6px; font-size: 10px; font-weight: 600;
+  color: var(--text-faint); letter-spacing: 0.12em; text-transform: uppercase;
+  display: flex; align-items: center; justify-content: space-between;
+  user-select: none; flex-shrink: 0;
+}
+.sidebar-actions { display: flex; gap: 2px; }
+.sact {
+  width: 22px; height: 22px; border-radius: 4px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-faint); font-size: 14px; transition: all 0.1s;
+}
+.sact:hover { color: var(--text); background: var(--bg3); }
+
+/* File tree */
+#filetree {
+  flex: 1; overflow-y: auto; overflow-x: hidden;
+  padding: 4px 0;
+}
+#filetree::-webkit-scrollbar { width: 4px; }
+#filetree::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+.tree-item {
+  display: flex; align-items: center; gap: 5px;
+  padding: 3px 0 3px 0; cursor: pointer;
+  font-size: 12px; color: var(--text-dim);
+  user-select: none; position: relative;
+  transition: color 0.1s;
+  white-space: nowrap; overflow: hidden;
+}
+.tree-item:hover { color: var(--text); background: var(--bg3); }
+.tree-item.selected { color: var(--text); background: var(--bg4); }
+.tree-item.selected::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+  width: 1px; background: var(--accent);
+}
+
+.tree-indent { display: inline-block; width: 16px; flex-shrink: 0; }
+.tree-icon { flex-shrink: 0; font-size: 13px; }
+.tree-name { overflow: hidden; text-overflow: ellipsis; flex: 1; padding-right: 6px; }
+.tree-name.editing {
+  background: var(--bg0); border: 1px solid var(--accent);
+  border-radius: 2px; outline: none; color: var(--text);
+  font-family: 'JetBrains Mono', monospace; font-size: 12px;
+  padding: 0 4px; width: 130px;
+}
+
+/* ══════════════════════════════════════════
+   EDITOR AREA
+══════════════════════════════════════════ */
+#editor-area {
+  flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0;
+}
+
+/* Tabs */
+#tabs-bar {
+  height: var(--tab-h); background: var(--bg1);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: flex-end; overflow-x: auto;
+  overflow-y: hidden; flex-shrink: 0;
+}
+#tabs-bar::-webkit-scrollbar { height: 2px; }
+#tabs-bar::-webkit-scrollbar-thumb { background: var(--border2); }
+
+.tab {
+  display: flex; align-items: center; gap: 6px;
+  padding: 0 14px; height: var(--tab-h); flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  font-size: 12px; color: var(--text-dim); cursor: pointer;
+  position: relative; transition: color 0.1s;
+  max-width: 180px; overflow: hidden;
+  background: var(--bg1);
+}
+.tab:hover { color: var(--text); background: var(--bg2); }
+.tab.active {
+  color: var(--text); background: var(--bg0);
+  border-top: 1px solid var(--accent);
+  margin-top: 1px;
+}
+.tab-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.tab-icon { font-size: 12px; flex-shrink: 0; }
+.tab-close {
+  width: 16px; height: 16px; border-radius: 3px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; color: var(--text-faint); transition: all 0.1s;
+  margin-left: auto;
+}
+.tab-close:hover { color: var(--red); background: rgba(255,76,106,0.12); }
+.tab-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+
+/* Monaco container */
+#monaco-container {
+  flex: 1; min-height: 0; position: relative;
+}
+#empty-state {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 12px;
+  color: var(--text-faint); pointer-events: none;
+}
+.empty-logo {
+  font-family: 'Rajdhani', sans-serif; font-size: 48px; font-weight: 700;
+  color: var(--border2); letter-spacing: 0.2em; line-height: 1;
+}
+.empty-sub { font-size: 11px; letter-spacing: 0.08em; }
+
+/* ══════════════════════════════════════════
+   BOTTOM PANEL
+══════════════════════════════════════════ */
+#panel-area {
+  height: var(--panel-h); background: var(--bg1);
+  border-top: 1px solid var(--border);
+  display: flex; flex-direction: column; flex-shrink: 0;
+}
+
+#panel-tabs {
+  display: flex; align-items: center;
+  background: var(--bg2); border-bottom: 1px solid var(--border);
+  padding: 0 8px; flex-shrink: 0; user-select: none;
+}
+.ptab {
+  font-size: 11px; padding: 5px 12px; cursor: pointer;
+  color: var(--text-faint); border-bottom: 2px solid transparent;
+  transition: all 0.15s; letter-spacing: 0.04em;
+}
+.ptab:hover  { color: var(--text); }
+.ptab.active { color: var(--accent); border-color: var(--accent); }
+
+.ptab-actions { margin-left: auto; display: flex; gap: 4px; }
+.ptab-btn {
+  font-size: 11px; padding: 2px 8px; border-radius: 3px;
+  cursor: pointer; border: 1px solid var(--border); background: transparent;
+  color: var(--text-faint); font-family: 'JetBrains Mono', monospace; transition: all 0.1s;
+}
+.ptab-btn:hover { color: var(--text); border-color: var(--border2); }
+
+/* Panel resize handle */
+#panel-resize {
+  height: 4px; cursor: ns-resize; flex-shrink: 0;
+  background: transparent; transition: background 0.15s;
+  position: relative; z-index: 10;
+}
+#panel-resize:hover, #panel-resize.dragging { background: var(--accent); }
+
+#panel-content { flex: 1; overflow: hidden; min-height: 0; }
+
+/* Terminal / output views */
+.panel-view { display: none; height: 100%; flex-direction: column; }
+.panel-view.active { display: flex; }
+
+#terminal-output {
+  flex: 1; overflow-y: auto; padding: 8px 14px;
+  font-size: 11.5px; line-height: 1.8; background: var(--bg0);
+}
+#terminal-output::-webkit-scrollbar { width: 4px; }
+#terminal-output::-webkit-scrollbar-thumb { background: var(--border2); }
+
+.term-line { display: flex; gap: 10px; padding: 1px 0; animation: fadeIn 0.1s ease; }
+@keyframes fadeIn { from{opacity:0;transform:translateX(-3px)}to{opacity:1;transform:none} }
+.term-ts   { color: var(--text-faint); font-size: 10px; flex-shrink: 0; padding-top: 2px; min-width: 58px; }
+.term-tag  { font-size: 10px; font-weight: 700; flex-shrink: 0; min-width: 46px; letter-spacing: 0.06em; padding-top: 2px; }
+.term-tag.log   { color: #60a5fa; }
+.term-tag.info  { color: var(--green); }
+.term-tag.warn  { color: var(--yellow); }
+.term-tag.error { color: var(--red); }
+.term-tag.sys   { color: var(--accent); }
+.term-msg { color: var(--text); word-break: break-all; flex: 1; }
+.term-msg.error { color: var(--red); }
+.term-msg.warn  { color: var(--yellow); }
+
+/* Preview iframe */
+#preview-frame {
+  width: 100%; height: 100%; border: none; background: #fff;
+  display: block;
+}
+
+/* ══════════════════════════════════════════
+   STATUS BAR
+══════════════════════════════════════════ */
+#statusbar {
+  height: var(--status-h); background: var(--accent-dim);
+  display: flex; align-items: center; padding: 0 12px; gap: 16px;
+  font-size: 10px; color: rgba(0,0,0,0.75); user-select: none; flex-shrink: 0;
+  font-weight: 500;
+}
+#statusbar.error-mode { background: var(--red); }
+.sb-item { display: flex; align-items: center; gap: 5px; cursor: default; }
+.sb-item:hover { color: #000; }
+.sb-right { margin-left: auto; display: flex; gap: 14px; }
+.sb-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(0,0,0,0.4); }
+.sb-dot.on { background: #000; }
+
+/* ══════════════════════════════════════════
+   CONTEXT MENU
+══════════════════════════════════════════ */
+#ctx-menu {
+  display: none; position: fixed; z-index: 9999;
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: 5px; padding: 4px; min-width: 160px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+}
+#ctx-menu.visible { display: block; }
+.ctx-item {
+  padding: 5px 10px; border-radius: 3px; cursor: pointer;
+  font-size: 11px; color: var(--text); display: flex;
+  align-items: center; gap: 8px; transition: background 0.1s;
+}
+.ctx-item:hover { background: var(--bg4); color: var(--accent); }
+.ctx-item.danger:hover { color: var(--red); }
+.ctx-item .ctx-icon { font-size: 13px; width: 16px; text-align: center; }
+#ctx-menu hr { border: none; border-top: 1px solid var(--border); margin: 3px 0; }
+
+/* ══════════════════════════════════════════
+   DIALOG / MODAL
+══════════════════════════════════════════ */
+#dialog-overlay {
+  display: none; position: fixed; inset: 0; z-index: 9998;
+  background: rgba(0,0,0,0.6); backdrop-filter: blur(2px);
+  align-items: center; justify-content: center;
+}
+#dialog-overlay.visible { display: flex; }
+#dialog {
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: 6px; padding: 20px; min-width: 320px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+}
+#dialog h3 { font-family: 'Rajdhani', sans-serif; font-size: 15px; color: var(--accent); margin-bottom: 12px; letter-spacing: 0.05em; }
+#dialog input, #dialog select {
+  width: 100%; background: var(--bg0); border: 1px solid var(--border2);
+  color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 12px;
+  padding: 7px 10px; border-radius: 3px; outline: none; margin-bottom: 12px;
+  caret-color: var(--accent);
+}
+#dialog input:focus, #dialog select:focus { border-color: var(--accent); }
+#dialog select option { background: var(--bg2); }
+.dialog-btns { display: flex; gap: 8px; justify-content: flex-end; }
+.dbtn {
+  font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  padding: 6px 14px; border-radius: 3px; cursor: pointer; border: 1px solid; transition: all 0.15s;
+}
+.dbtn-ok     { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 700; }
+.dbtn-ok:hover { box-shadow: var(--glow); }
+.dbtn-cancel { background: transparent; color: var(--text-dim); border-color: var(--border2); }
+.dbtn-cancel:hover { color: var(--text); }
+
+/* ══════════════════════════════════════════
+   SIDEBAR RESIZE
+══════════════════════════════════════════ */
+#sidebar-resize {
+  width: 4px; cursor: ew-resize; flex-shrink: 0;
+  background: transparent; transition: background 0.15s; z-index: 50;
+}
+#sidebar-resize:hover, #sidebar-resize.dragging { background: var(--accent); }
+
+/* file icon colors */
+.ic-html { color: #e44d26; }
+.ic-css  { color: #264de4; }
+.ic-js   { color: #f7df1e; }
+.ic-ts   { color: #3178c6; }
+.ic-json { color: #89ca78; }
+.ic-md   { color: #a0c4ff; }
+.ic-txt  { color: var(--text-dim); }
+.ic-dir  { color: var(--yellow); }
+.ic-img  { color: var(--purple); }
+.ic-xml  { color: var(--orange); }
+
+/* ══════════════════════════════════════════
+   ZIP DRAG-DROP OVERLAY
+══════════════════════════════════════════ */
+#zip-drop-overlay {
+  display: none; position: fixed; inset: 0; z-index: 99990;
+  background: rgba(0,8,16,0.88); backdrop-filter: blur(4px);
+  align-items: center; justify-content: center; pointer-events: none;
+}
+#zip-drop-overlay.active { display: flex; pointer-events: all; animation: dropFadeIn 0.15s ease; }
+@keyframes dropFadeIn { from{opacity:0} to{opacity:1} }
+#zip-drop-inner {
+  border: 2px dashed var(--accent); border-radius: 12px; padding: 60px 80px; text-align: center;
+  box-shadow: 0 0 60px rgba(0,212,255,0.15), inset 0 0 40px rgba(0,212,255,0.04);
+  animation: dropPulse 1.5s ease-in-out infinite;
+}
+@keyframes dropPulse {
+  0%,100% { border-color: var(--accent); box-shadow: 0 0 40px rgba(0,212,255,0.15); }
+  50%      { border-color: #00ffcc;      box-shadow: 0 0 60px rgba(0,212,255,0.3);  }
+}
+#zip-drop-overlay.reject #zip-drop-inner { border-color: var(--red); box-shadow: 0 0 40px rgba(255,76,106,0.25); animation: none; }
+#zip-drop-overlay.reject #zip-drop-title { color: var(--red); }
+#zip-drop-overlay.reject #zip-drop-sub   { color: var(--red); opacity: 0.6; }
+#zip-drop-icon  { font-size: 64px; margin-bottom: 16px; }
+#zip-drop-title { font-family: 'Rajdhani', sans-serif; font-size: 24px; font-weight: 700;
+                  color: var(--accent); letter-spacing: 0.08em; margin-bottom: 8px; }
+#zip-drop-sub   { font-size: 12px; color: var(--text-dim); letter-spacing: 0.05em; }
+/* ══════════════════════════════════════════
+   ZIP PROGRESS MODAL
+══════════════════════════════════════════ */
+#zip-modal-overlay {
+  display: none; position: fixed; inset: 0; z-index: 99991;
+  background: rgba(0,0,0,0.75); backdrop-filter: blur(3px);
+  align-items: center; justify-content: center;
+}
+#zip-modal-overlay.visible { display: flex; }
+#zip-modal {
+  background: var(--bg2); border: 1px solid var(--border2); border-radius: 8px;
+  padding: 24px 28px; width: 420px; max-width: 90vw;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.7); animation: modalSlide 0.2s ease;
+}
+@keyframes modalSlide { from{opacity:0;transform:translateY(-12px)} to{opacity:1;transform:none} }
+#zip-modal-title {
+  font-family: 'Rajdhani', sans-serif; font-size: 16px; font-weight: 700;
+  color: var(--accent); letter-spacing: 0.08em; margin-bottom: 6px;
+  display: flex; align-items: center; gap: 8px;
+}
+#zip-modal-filename { font-size: 11px; color: var(--text-dim); margin-bottom: 16px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#zip-progress-track { height: 4px; background: var(--bg4); border-radius: 2px; overflow: hidden; margin-bottom: 8px; }
+#zip-progress-bar   { height: 100%; width: 0%; background: var(--accent);
+  border-radius: 2px; transition: width 0.15s ease; box-shadow: 0 0 8px rgba(0,212,255,0.5); }
+#zip-progress-label { font-size: 10px; color: var(--text-faint); letter-spacing: 0.06em; margin-bottom: 12px; min-height: 16px; }
+#zip-file-list { max-height: 180px; overflow-y: auto; font-size: 10.5px; color: var(--text-dim);
+  line-height: 1.9; border-top: 1px solid var(--border); padding-top: 10px; margin-top: 4px; }
+#zip-file-list::-webkit-scrollbar { width: 3px; }
+#zip-file-list::-webkit-scrollbar-thumb { background: var(--border2); }
+.zfl-item { display: flex; align-items: center; gap: 7px; padding: 1px 0; }
+.zfl-ok   { color: var(--green);  font-size: 11px; flex-shrink: 0; }
+.zfl-skip { color: var(--yellow); font-size: 11px; flex-shrink: 0; }
+.zfl-err  { color: var(--red);    font-size: 11px; flex-shrink: 0; }
+.zfl-path { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.zfl-size { color: var(--text-faint); flex-shrink: 0; font-size: 10px; }
+
+/* ══════════════════════════════════════════
+   STORAGE MODE SWITCHER
+══════════════════════════════════════════ */
+#storage-indicator {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 10px; border-radius: 4px;
+  background: var(--bg3); border: 1px solid var(--border);
+  font-size: 10px; cursor: pointer; transition: all 0.15s;
+}
+#storage-indicator:hover { background: var(--bg4); border-color: var(--border2); }
+#storage-icon { font-size: 12px; }
+#storage-label { color: var(--text-faint); letter-spacing: 0.06em; }
+#storage-mode { color: var(--accent); font-weight: 700; letter-spacing: 0.05em; }
+
+/* Storage selector dropdown */
+#storage-selector {
+  display: none; position: absolute; top: calc(100% + 4px); right: 0;
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: 5px; padding: 6px; min-width: 200px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.6); z-index: 1000;
+}
+#storage-selector.visible { display: block; }
+.storage-option {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; border-radius: 4px; cursor: pointer;
+  transition: all 0.15s; margin-bottom: 4px;
+}
+.storage-option:hover { background: var(--bg4); }
+.storage-option.active { background: rgba(0,212,255,0.1); border: 1px solid rgba(0,212,255,0.3); }
+.storage-option-icon { font-size: 16px; }
+.storage-option-text { flex: 1; }
+.storage-option-name { font-size: 11px; color: var(--text); font-weight: 600; }
+.storage-option-desc { font-size: 9px; color: var(--text-faint); margin-top: 2px; }
+.storage-option-check { color: var(--accent); font-size: 14px; display: none; }
+.storage-option.active .storage-option-check { display: block; }
+
+/* ══════════════════════════════════════════
+   SHARED FILES PANEL (File System Access API)
+══════════════════════════════════════════ */
+#sidebar-shared { height: 100%; display: flex; flex-direction: column; overflow: hidden; }
+#shared-files-list {
+  flex: 1; overflow-y: auto; padding: 4px 0;
+  font-size: 11.5px;
+}
+#shared-files-list::-webkit-scrollbar { width: 4px; }
+#shared-files-list::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+.shared-item {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 8px 4px 14px; cursor: pointer;
+  color: var(--text-dim); transition: all 0.1s;
+  white-space: nowrap; overflow: hidden;
+  font-size: 11.5px;
+}
+.shared-item:hover { background: var(--bg3); color: var(--text); }
+.shared-item.selected { background: var(--bg4); color: var(--text); border-left: 1px solid var(--accent); }
+.shared-item .si-icon { font-size: 12px; flex-shrink: 0; }
+.shared-item .si-name { overflow: hidden; text-overflow: ellipsis; flex: 1; }
+.shared-item .si-badge {
+  font-size: 9px; padding: 1px 4px; border-radius: 2px;
+  background: rgba(61,220,132,0.15); color: var(--green); flex-shrink: 0;
+}
+.shared-item .si-badge.dirty {
+  background: rgba(240,192,64,0.15); color: var(--yellow);
+}
+.shared-empty {
+  padding: 20px 14px; text-align: center; color: var(--text-faint);
+  font-size: 11px; line-height: 1.8;
+}
+.shared-actions {
+  padding: 6px 8px; border-top: 1px solid var(--border);
+  display: flex; gap: 4px; flex-wrap: wrap; flex-shrink: 0;
+}
+.shared-btn {
+  font-size: 10px; padding: 4px 8px; border-radius: 3px; cursor: pointer;
+  border: 1px solid var(--border2); background: transparent;
+  color: var(--text-dim); font-family: 'JetBrains Mono', monospace;
+  transition: all 0.1s; white-space: nowrap;
+}
+.shared-btn:hover { color: var(--accent); border-color: var(--accent-dim); background: rgba(0,212,255,0.05); }
+.shared-btn.primary { background: rgba(61,220,132,0.1); color: var(--green); border-color: rgba(61,220,132,0.3); }
+.shared-btn.primary:hover { background: rgba(61,220,132,0.2); }
+#shared-api-warning {
+  margin: 8px; padding: 8px 10px; border-radius: 4px;
+  background: rgba(240,192,64,0.08); border: 1px solid rgba(240,192,64,0.2);
+  font-size: 10px; color: var(--yellow); line-height: 1.6; display: none;
+}
+.shared-dir-row {
+  color: var(--text); cursor: pointer;
+}
+.shared-dir-row:hover { background: var(--bg3); }
+.shared-dir-header {
+  padding: 3px 10px; font-size: 9px; letter-spacing: 0.1em;
+  color: var(--text-faint); text-transform: uppercase; user-select: none;
+  display: flex; align-items: center; gap: 6px;
+}
+.shared-dir-header .sdi-path { color: var(--accent-dim); font-size: 9px; overflow: hidden; text-overflow: ellipsis; }
+</style>
+</head>
+<body>
+
+<!-- ── Title bar ── -->
+<div id="titlebar">
+  <div class="title-logo">VOID <em>browser ide</em></div>
+  <div class="title-menu">
+    <div class="menu-item" id="menu-file">File
+      <div class="menu-dropdown">
+        <div class="dd-item" onclick="showNewFileDialog()">  <span>New File</span>       <span class="kbd">Ctrl+N</span></div>
+        <div class="dd-item" onclick="showNewFolderDialog()"><span>New Folder</span>      <span class="kbd"></span></div>
+        <hr>
+        <div class="dd-item" onclick="saveCurrentFile()">    <span>Save</span>            <span class="kbd">Ctrl+S</span></div>
+        <div class="dd-item" onclick="saveAll()">            <span>Save All</span>        <span class="kbd">Ctrl+Shift+S</span></div>
+        <hr>
+        <div class="dd-item" onclick="importFile()">  <span>Import File…</span>     <span class="kbd"></span></div>
+        <div class="dd-item" onclick="importZip()">   <span>Import ZIP…</span>      <span class="kbd">Ctrl+Shift+O</span></div>
+        <hr>
+        <div class="dd-item" onclick="exportFile()">  <span>Export File…</span>     <span class="kbd"></span></div>
+        <div class="dd-item" onclick="exportZip()">   <span>Export as ZIP…</span>   <span class="kbd">Ctrl+Shift+E</span></div>
+        <hr>
+        <div class="dd-item" onclick="resetFS()">            <span>Reset Filesystem</span><span class="kbd"></span></div>
+        <hr>
+        <div class="dd-item" onclick="promptSetProjectDir()"> <span>Set Project Dir…</span>  <span class="kbd"></span></div>
+      </div>
+    </div>
+    <div class="menu-item" id="menu-view">View
+      <div class="menu-dropdown">
+        <div class="dd-item" onclick="togglePanel()">  <span>Toggle Panel</span>   <span class="kbd">Ctrl+`</span></div>
+        <div class="dd-item" onclick="toggleSidebar()"><span>Toggle Sidebar</span> <span class="kbd">Ctrl+B</span></div>
+        <hr>
+        <div class="dd-item" onclick="switchPanelTab('terminal')"><span>Terminal</span></div>
+        <div class="dd-item" onclick="switchPanelTab('preview')"> <span>Preview</span></div>
+      </div>
+    </div>
+    <div class="menu-item" id="menu-run">Run
+      <div class="menu-dropdown">
+        <div class="dd-item" onclick="runCurrentFile()"><span>Run File</span>         <span class="kbd">Ctrl+Enter</span></div>
+        <div class="dd-item" onclick="runProjectIndex()">    <span>Run index.html</span>  <span class="kbd">Ctrl+Shift+Enter</span></div>
+        <hr>
+        <div class="dd-item" onclick="clearTerminal()"><span>Clear Terminal</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="title-actions">
+    <div id="storage-indicator" onclick="toggleStorageSelector()" style="position:relative">
+      <span id="storage-icon">💾</span>
+      <span id="storage-label">Storage:</span>
+      <span id="storage-mode">IndexedDB</span>
+      <div id="storage-selector">
+        <div class="storage-option active" onclick="switchStorageMode(event, 'indexed')">
+          <span class="storage-option-icon">🗄️</span>
+          <div class="storage-option-text">
+            <div class="storage-option-name">IndexedDB</div>
+            <div class="storage-option-desc">Persistent, fast (recommended)</div>
+          </div>
+          <span class="storage-option-check">✓</span>
+        </div>
+        <div class="storage-option" onclick="switchStorageMode(event, 'local')">
+          <span class="storage-option-icon">📦</span>
+          <div class="storage-option-text">
+            <div class="storage-option-name">LocalStorage</div>
+            <div class="storage-option-desc">Persistent, 5-10 MB limit</div>
+          </div>
+          <span class="storage-option-check">✓</span>
+        </div>
+        <div class="storage-option" onclick="switchStorageMode(event, 'memory')">
+          <span class="storage-option-icon">⚡</span>
+          <div class="storage-option-text">
+            <div class="storage-option-name">Memory</div>
+            <div class="storage-option-desc">Volatile, lost on refresh</div>
+          </div>
+          <span class="storage-option-check">✓</span>
+        </div>
+        <div class="storage-option" id="storage-opt-folder" onclick="switchStorageToFolder(event)">
+          <span class="storage-option-icon">🗂️</span>
+          <div class="storage-option-text">
+            <div class="storage-option-name">Real Folder</div>
+            <div class="storage-option-desc">Read/write a folder on disk</div>
+          </div>
+          <span class="storage-option-check">✓</span>
+        </div>
+      </div>
+    </div>
+    <button class="tbtn tbtn-popout" onclick="popoutPreview()" title="Open preview in popup window">⧉ Popout</button>
+    <button class="tbtn tbtn-save" onclick="saveCurrentFile()">💾 Save</button>
+    <button class="tbtn tbtn-dir" onclick="promptSetProjectDir()" id="btn-project-dir" title="Set project directory for native file:// loading">📂 Dir</button>
+    <button class="tbtn tbtn-run"  onclick="runCurrentFile()" id="btn-run" title="Run (Ctrl+Enter)">▶ Run</button>
+  </div>
+</div>
+
+<!-- ── App body ── -->
+<div id="app">
+
+  <!-- Activity bar -->
+  <div id="activitybar">
+    <div class="act-btn active" id="act-files" onclick="setActivity('files')" title="Explorer">📁</div>
+    <div class="act-btn" id="act-search" onclick="setActivity('search')" title="Search">🔍</div>
+    <div class="act-btn" id="act-shared" onclick="setActivity('shared')" title="Shared Files (File System Access API)">🖥️</div>
+  </div>
+
+  <!-- Sidebar -->
+  <div id="sidebar">
+    <div id="sidebar-explorer">
+      <div class="sidebar-header">
+        <span>Explorer</span>
+        <div class="sidebar-actions">
+          <div class="sact" onclick="showNewFileDialog()"   title="New File">📄</div>
+          <div class="sact" onclick="showNewFolderDialog()" title="New Folder">📁</div>
+          <div class="sact" onclick="refreshTree()"         title="Refresh">🔄</div>
+          <div class="sact" onclick="importZip()"            title="Import ZIP">📦</div>
+        </div>
+      </div>
+      <div id="filetree"></div>
+    </div>
+    <div id="sidebar-search" style="display:none">
+      <div class="sidebar-header"><span>Search</span></div>
+      <div style="padding:8px">
+        <input id="search-input" type="text" placeholder="Search in files…"
+          style="width:100%;background:var(--bg0);border:1px solid var(--border2);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:11px;padding:5px 8px;border-radius:3px;outline:none;"
+          oninput="doSearch(this.value)">
+        <div id="search-results" style="margin-top:8px;font-size:11px;color:var(--text-dim);"></div>
+      </div>
+    </div>
+
+    <!-- Shared Files panel (File System Access API) -->
+    <div id="sidebar-shared" style="display:none">
+      <div class="sidebar-header">
+        <span>Shared Files</span>
+        <div class="sidebar-actions">
+          <div class="sact" onclick="sharedOpenFile()" title="Open File(s)">📄</div>
+          <div class="sact" onclick="sharedOpenDir()" title="Open Folder">📁</div>
+          <div class="sact" onclick="sharedSaveActive()" title="Save back to disk">💾</div>
+          <div class="sact" onclick="sharedClearAll()" title="Clear list">✕</div>
+        </div>
+      </div>
+      <div id="shared-api-warning">⚠ File System Access API not supported in this browser. Use Chrome/Edge 86+.</div>
+      <div id="shared-files-list">
+        <div class="shared-empty">No real files open.<br><br>
+          Use <b>📄</b> to pick file(s) or <b>📁</b> for a whole folder.<br><br>
+          Files open with full read &amp; write access to your actual disk.
+        </div>
+      </div>
+      <div class="shared-actions">
+        <button class="shared-btn primary" onclick="sharedOpenFile()">📄 Open File(s)</button>
+        <button class="shared-btn primary" onclick="sharedOpenDir()">📁 Open Folder</button>
+        <button class="shared-btn" onclick="sharedSaveActive()">💾 Save to Disk</button>
+        <button class="shared-btn" onclick="sharedSaveAll()">💾 Save All</button>
+        <button class="shared-btn" onclick="sharedImportToVFS()">⬇ Copy→VFS</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sidebar resize handle -->
+  <div id="sidebar-resize"></div>
+
+  <!-- Editor area -->
+  <div id="editor-area">
+    <div id="tabs-bar"></div>
+    <div id="monaco-container">
+      <div id="empty-state">
+        <div class="empty-logo">VOID</div>
+        <div class="empty-sub">open a file or create a new one</div>
+      </div>
+    </div>
+
+    <!-- Panel resize -->
+    <div id="panel-resize"></div>
+
+    <!-- Bottom panel -->
+    <div id="panel-area">
+      <div id="panel-tabs">
+        <div class="ptab active" onclick="switchPanelTab('terminal')" id="ptab-terminal">TERMINAL</div>
+        <div class="ptab" onclick="switchPanelTab('preview')"  id="ptab-preview">PREVIEW</div>
+        <div class="ptab-actions">
+          <button class="ptab-btn" onclick="clearTerminal()">clear</button>
+          <button class="ptab-btn" onclick="promptSetProjectDir()" title="Set project dir for native file:// loading" id="ptab-btn-dir">📂 dir</button>
+          <button class="ptab-btn" onclick="runCurrentFile()">▶ run</button>
+        </div>
+      </div>
+      <div id="panel-content">
+        <div class="panel-view active" id="view-terminal">
+          <div id="terminal-output"></div>
+        </div>
+        <div class="panel-view" id="view-preview">
+          <iframe id="preview-frame" sandbox="allow-scripts allow-forms allow-modals allow-popups"></iframe>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Status bar -->
+<div id="statusbar">
+  <div class="sb-item"><span class="sb-dot on" id="sb-dot"></span><span id="sb-branch">VOID</span></div>
+  <div class="sb-item" id="sb-file">No file open</div>
+  <div class="sb-right">
+    <div class="sb-item" id="sb-lang">—</div>
+    <div class="sb-item" id="sb-pos">Ln 1, Col 1</div>
+    <div class="sb-item">UTF-8</div>
+    <div class="sb-item">BrowserFS</div>
+  </div>
+</div>
+
+<!-- Context menu -->
+<div id="ctx-menu">
+  <div class="ctx-item" id="ctx-open">    <span class="ctx-icon">📂</span>Open</div>
+  <div class="ctx-item" id="ctx-rename">  <span class="ctx-icon">✏️</span>Rename</div>
+  <hr>
+  <div class="ctx-item" id="ctx-newfile"> <span class="ctx-icon">📄</span>New File Here</div>
+  <div class="ctx-item" id="ctx-newfolder"><span class="ctx-icon">📁</span>New Folder Here</div>
+  <hr>
+  <div class="ctx-item danger" id="ctx-delete"><span class="ctx-icon">🗑</span>Delete</div>
+</div>
+
+<!-- Dialog -->
+<div id="dialog-overlay">
+  <div id="dialog">
+    <h3 id="dialog-title">New File</h3>
+    <input type="text" id="dialog-input" placeholder="filename.js" autocomplete="off" spellcheck="false">
+    <div class="dialog-btns">
+      <button class="dbtn dbtn-cancel" onclick="(function(){var fn=_confirmCancel;closeDialog();if(fn)fn();})()">Cancel</button>
+      <button class="dbtn dbtn-ok"     id="dialog-ok">Create</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ZIP drag-drop overlay -->
+<div id="zip-drop-overlay">
+  <div id="zip-drop-inner">
+    <div id="zip-drop-icon">📦</div>
+    <div id="zip-drop-title">Drop ZIP to Import</div>
+    <div id="zip-drop-sub">Release to extract all files into the filesystem</div>
+  </div>
+</div>
+
+<!-- ZIP progress modal -->
+<div id="zip-modal-overlay">
+  <div id="zip-modal">
+    <div id="zip-modal-title">Importing ZIP</div>
+    <div id="zip-modal-filename"></div>
+    <div id="zip-progress-track"><div id="zip-progress-bar"></div></div>
+    <div id="zip-progress-label">Reading archive…</div>
+    <div id="zip-file-list"></div>
+  </div>
+</div>
+
+<!-- JSZip -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<!-- BrowserFS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/BrowserFS/2.0.0/browserfs.min.js"></script>
+<!-- Monaco loader -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
+
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════════════════════════
+//  GLOBALS
+// ═══════════════════════════════════════════════════════════════════
+let FS = null;          // BrowserFS fs module
+
+// ═══════════════════════════════════════════════════════════════════
+//  STORAGE MODE SWITCHER
+// ═══════════════════════════════════════════════════════════════════
+let currentStorageMode = 'indexed'; // indexed, local, or memory
+
+function toggleStorageSelector() {
+  var sel = document.getElementById('storage-selector');
+  sel.classList.toggle('visible');
+  event.stopPropagation();
+}
+
+async function switchStorageMode(event, mode) {
+  event.stopPropagation();
+  
+  if (mode === currentStorageMode) {
+    document.getElementById('storage-selector').classList.remove('visible');
+    return;
+  }
+  
+  showConfirm('Switch to ' + mode.toUpperCase() + ' storage?', 'Current unsaved changes will be lost and the IDE will reload.', () => {
+    try { localStorage.setItem('void-storage-mode', mode); } catch(e) {}
+    termLog('sys', 'Switching to ' + mode.toUpperCase() + ' storage...');
+    setTimeout(() => location.reload(), 500);
+  });
+}
+
+// Init storage mode from saved preference
+function initStorageMode() {
+  try {
+    var saved = localStorage.getItem('void-storage-mode');
+    if (saved && ['indexed', 'local', 'memory'].includes(saved)) {
+      currentStorageMode = saved;
+      var labels = { indexed: 'IndexedDB', local: 'LocalStorage', memory: 'Memory' };
+      document.getElementById('storage-mode').textContent = labels[saved];
+      document.querySelectorAll('.storage-option').forEach(opt => opt.classList.remove('active'));
+      const el = document.querySelector('.storage-option[onclick*="' + saved + '"]');
+      if (el) el.classList.add('active');
+    }
+  } catch(e) {}
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  FOLDER STORAGE — real directory as VFS backend
+// ═══════════════════════════════════════════════════════════════════
+let folderStorageRoot = null;   // FileSystemDirectoryHandle
+let folderStorageActive = false;
+
+// Navigate to a subpath within the folder root, creating dirs as needed
+async function folderNavTo(pathStr, create) {
+  const parts = pathStr.replace(/^\/+|\/+$/g,'').split('/').filter(Boolean);
+  let dir = folderStorageRoot;
+  for (const part of parts) {
+    dir = await dir.getDirectoryHandle(part, { create: !!create });
+  }
+  return dir;
+}
+
+async function folderGetFileHandle(pathStr, create) {
+  const parts = pathStr.replace(/^\/+|\/+$/g,'').split('/').filter(Boolean);
+  const fileName = parts.pop();
+  let dir = folderStorageRoot;
+  for (const part of parts) {
+    dir = await dir.getDirectoryHandle(part, { create: !!create });
+  }
+  return dir.getFileHandle(fileName, { create: !!create });
+}
+
+// Folder-backed FS helpers (same signatures as BrowserFS ones)
+async function folderReadFile(p) {
+  const h = await folderGetFileHandle(p, false);
+  const f = await h.getFile();
+  const isBin = /\.(png|jpg|jpeg|gif|webp|bmp|ico|woff2?|ttf|otf|mp3|mp4|wav|ogg|pdf|zip|gz|wasm|avif|svg)$/i.test(p);
+  if (isBin) {
+    const buf = await f.arrayBuffer();
+    const bytes = new Uint8Array(buf);
+    let b64 = ''; const chunk = 8192;
+    for (let i = 0; i < bytes.length; i += chunk)
+      b64 += String.fromCharCode.apply(null, bytes.subarray(i, Math.min(i+chunk, bytes.length)));
+    const ext = p.split('.').pop().toLowerCase();
+    return 'data:' + getMime(ext) + ';base64,' + btoa(b64);
+  }
+  return f.text();
+}
+
+async function folderWriteFile(p, data) {
+  const h = await folderGetFileHandle(p, true);
+  const w = await h.createWritable();
+  if (typeof data === 'string' && data.startsWith('data:') && data.includes(';base64,')) {
+    const b64 = data.split(';base64,')[1];
+    await w.write(Uint8Array.from(atob(b64), c => c.charCodeAt(0)));
+  } else {
+    await w.write(data);
+  }
+  await w.close();
+}
+
+async function folderReaddir(p) {
+  const dir = p === '/' ? folderStorageRoot : await folderNavTo(p, false);
+  const names = [];
+  for await (const name of dir.keys()) names.push(name);
+  return names;
+}
+
+async function folderStat(p) {
+  const parts = p.replace(/^\/+|\/+$/g,'').split('/').filter(Boolean);
+  if (!parts.length) return { isDirectory: () => true };
+  const name = parts[parts.length - 1];
+  let dir = folderStorageRoot;
+  for (const part of parts.slice(0,-1)) dir = await dir.getDirectoryHandle(part, { create: false });
+  try {
+    await dir.getFileHandle(name, { create: false });
+    return { isDirectory: () => false };
+  } catch(e) {
+    await dir.getDirectoryHandle(name, { create: false });
+    return { isDirectory: () => true };
+  }
+}
+
+async function folderExists(p) {
+  try { await folderStat(p); return true; } catch(e) { return false; }
+}
+
+async function folderMkdir(p) {
+  await folderNavTo(p, true);
+}
+
+async function folderUnlink(p) {
+  const parts = p.replace(/^\/+|\/+$/g,'').split('/').filter(Boolean);
+  const name = parts.pop();
+  let dir = folderStorageRoot;
+  for (const part of parts) dir = await dir.getDirectoryHandle(part, { create: false });
+  await dir.removeEntry(name);
+}
+
+async function folderRmdir(p) {
+  const parts = p.replace(/^\/+|\/+$/g,'').split('/').filter(Boolean);
+  const name = parts.pop();
+  let dir = folderStorageRoot;
+  for (const part of parts) dir = await dir.getDirectoryHandle(part, { create: false });
+  await dir.removeEntry(name, { recursive: true });
+}
+
+// Activate folder storage — reassign all FS helpers to real-folder versions
+function activateFolderStorage(dirHandle) {
+  folderStorageRoot = dirHandle;
+  folderStorageActive = true;
+
+  // Reassign the module-level let helpers
+  fsReadFile  = folderReadFile;
+  fsWriteFile = folderWriteFile;
+  fsReaddir   = folderReaddir;
+  fsStat      = folderStat;
+  fsExists    = folderExists;
+  fsMkdir     = folderMkdir;
+  fsUnlink    = folderUnlink;
+  fsRmdir     = folderRmdir;
+  fsRename    = async (o, n) => {
+    try { const c = await folderReadFile(o); await folderWriteFile(n, c); await folderUnlink(o); }
+    catch(e) { throw e; }
+  };
+
+  document.getElementById('storage-mode').textContent = '📂 ' + dirHandle.name;
+  document.getElementById('sb-branch').textContent = '📂 ' + dirHandle.name;
+  document.querySelectorAll('.storage-option').forEach(o => o.classList.remove('active'));
+  document.getElementById('storage-opt-folder').classList.add('active');
+
+  // Also index in shared file map so asset resolution works
+  if (!sharedRoots.find(r => r.name === dirHandle.name)) {
+    sharedRoots.push({ name: dirHandle.name, handle: dirHandle, kind: 'dir' });
+    sharedTreeExp.add(dirHandle.name);
+    sharedIndexDir(dirHandle, dirHandle.name, dirHandle.name).then(() => sharedRender());
+  }
+
+  termLog('sys', 'Folder storage active: ' + dirHandle.name + ' — reads/writes go to disk.');
+}
+
+async function switchStorageToFolder(event) {
+  event.stopPropagation();
+  if (!sharedFSAP) { termLog('warn', 'File System Access API not supported in this browser.'); return; }
+  showConfirm('Use a real folder as the IDE filesystem?', 'All file operations will read/write directly to that folder on disk.', async () => {
+    try {
+      document.getElementById('storage-selector').classList.remove('visible');
+      const dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+      activateFolderStorage(dirHandle);
+      // Reload file tree from real folder
+      openTabs.forEach(t => t.model.dispose());
+      openTabs = []; activeTab = null;
+      monacoEditor.setModel(null);
+      document.getElementById('empty-state').style.display = 'flex';
+      renderTabs();
+      await refreshTree();
+    } catch(e) {
+      if (e.name !== 'AbortError') termLog('error', 'Folder storage failed: ' + e.message);
+    }
+  });
+}
+
+// Close selector when clicking outside
+document.addEventListener('click', () => {
+  document.getElementById('storage-selector')?.classList.remove('visible');
+});
+
+
+let monacoEditor = null;
+let openTabs = [];      // [{path, model, dirty}]
+let activeTab = null;   // path string
+let ctxTarget = null;   // path string for context menu
+
+const DEFAULT_FILES = {
+
+};
+
+// ═══════════════════════════════════════════════════════════════════
+//  INIT — BrowserFS → Monaco → load tree
+// ═══════════════════════════════════════════════════════════════════
+
+// Try backends in order of preference until one works
+async function initBrowserFS() {
+  // Map current mode to backend name
+  const modeMap = { indexed: 'IndexedDB', local: 'LocalStorage', memory: 'InMemory' };
+  const preferred = modeMap[currentStorageMode] || 'IndexedDB';
+  
+  const backends = [
+    {
+      name: 'IndexedDB',
+      cfg: { fs: 'IndexedDB', options: { storeName: 'void-ide-fs' } }
+    },
+    {
+      name: 'LocalStorage',
+      cfg: { fs: 'LocalStorage' }
+    },
+    {
+      name: 'InMemory',
+      cfg: { fs: 'InMemory' }
+    },
+  ];
+  
+  // Sort backends to try preferred first
+  backends.sort((a, b) => a.name === preferred ? -1 : b.name === preferred ? 1 : 0);
+
+  for (const { name, cfg } of backends) {
+    try {
+      await new Promise((res, rej) =>
+        BrowserFS.configure(cfg, e => e ? rej(e) : res())
+      );
+      FS = BrowserFS.BFSRequire('fs');
+      // Quick sanity-check: can we stat root?
+      await new Promise((res, rej) => FS.stat('/', (e, s) => e ? rej(e) : res(s)));
+      termLog('sys', `BrowserFS ready (${name} backend)`);
+      if (name === 'InMemory') termLog('warn', 'Using in-memory FS — changes will not persist across page reloads.');
+      return name;
+    } catch(e) {
+      termLog('warn', `${name} backend failed (${e.message}), trying next…`);
+      // Reset BrowserFS internal state before retrying
+      try { BrowserFS.initialize(null); } catch(_) {}
+    }
+  }
+  throw new Error('All BrowserFS backends failed.');
+}
+
+async function boot() {
+  initStorageMode();
+  termLog('sys', 'Booting VOID IDE…');
+  await initBrowserFS();
+
+  // Check if FS already has files
+  let items = [];
+  try { items = await fsReaddir('/'); } catch(e) {
+    // Root unreadable on fresh IndexedDB — that's fine, seed will create files
+    items = [];
+  }
+
+  // Filter out hidden/system entries
+  const userFiles = items.filter(i => !i.startsWith('.'));
+
+  if (!userFiles.length) {
+    termLog('sys', 'Seeding default project files…');
+    for (const [filePath, content] of Object.entries(DEFAULT_FILES)) {
+      await fsWriteFileSafe(filePath, content);
+    }
+    termLog('sys', 'Default files created.');
+  } else {
+    termLog('sys', `Found ${userFiles.length} existing file(s).`);
+  }
+
+  await initMonaco();
+  await refreshTree();
+  // Auto-open index.html if it exists, else first file
+  if (await fsExists('/index.html')) {
+    await openFile('/index.html');
+  } else if (userFiles.length) {
+    await openFile('/' + userFiles[0]);
+  }
+  termLog('sys', 'VOID ready. Happy coding! 🚀');
+  document.getElementById('sb-branch').textContent = '✓ FS mounted';
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  FS HELPERS (promisified)
+// ═══════════════════════════════════════════════════════════════════
+let fsReaddir  = p => new Promise((res,rej)=>FS.readdir(p,(e,d)=>e?rej(e):res(d)));
+let fsReadFile = p => new Promise((res,rej)=>FS.readFile(p,'utf8',(e,d)=>e?rej(e):res(d)));
+let fsStat     = p => new Promise((res,rej)=>FS.stat(p,(e,s)=>e?rej(e):res(s)));
+let fsMkdir    = p => new Promise((res,rej)=>FS.mkdir(p,(e)=>e?rej(e):res()));
+let fsUnlink   = p => new Promise((res,rej)=>FS.unlink(p,(e)=>e?rej(e):res()));
+let fsRmdir    = p => new Promise((res,rej)=>FS.rmdir(p,(e)=>e?rej(e):res()));
+let fsRename   = (o,n) => new Promise((res,rej)=>FS.rename(o,n,(e)=>e?rej(e):res()));
+let fsExists   = p => new Promise(res=>FS.exists(p,res));
+
+// Raw write — caller must ensure parent dir exists
+let fsWriteFile = (p,d) => new Promise((res,rej)=>FS.writeFile(p,d,'utf8',(e)=>e?rej(e):res()));
+
+// mkdir -p: recursively create all ancestor directories
+async function fsMkdirP(dirPath) {
+  if (!dirPath || dirPath === '/') return;
+  const parts = dirPath.replace(/^\/+/,'').split('/').filter(Boolean);
+  let cur = '';
+  for (const part of parts) {
+    cur += '/' + part;
+    if (!(await fsExists(cur))) {
+      try { await fsMkdir(cur); }
+      catch(e) {
+        if (!String(e.message).includes('EEXIST') && String(e.code) !== 'EEXIST') throw e;
+      }
+    }
+  }
+}
+
+// Safe write: creates all parent dirs first, then writes
+async function fsWriteFileSafe(filePath, data) {
+  const parts = filePath.split('/');
+  parts.pop();
+  const dir = parts.join('/') || '/';
+  if (dir && dir !== '/') await fsMkdirP(dir);
+  await fsWriteFile(filePath, data);
+}
+
+// Recursive delete: remove a folder and all its contents
+async function fsRmdirR(dirPath) {
+  const items = await fsReaddir(dirPath).catch(()=>[]);
+  for (const item of items) {
+    const p = joinPath(dirPath, item);
+    const s = await fsStat(p).catch(()=>null);
+    if (!s) continue;
+    if (s.isDirectory()) await fsRmdirR(p);
+    else await fsUnlink(p).catch(()=>{});
+  }
+  await fsRmdir(dirPath).catch(()=>{});
+}
+
+//  MONACO INIT
+// ═══════════════════════════════════════════════════════════════════
+function initMonaco() {
+  return new Promise(resolve => {
+    require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' } });
+    require(['vs/editor/editor.main'], () => {
+      // Void dark theme
+      monaco.editor.defineTheme('void-dark', {
+        base: 'vs-dark',
+        inherit: true,
+        rules: [
+          { token: 'comment',    foreground: '3d5266', fontStyle: 'italic' },
+          { token: 'keyword',    foreground: '00d4ff', fontStyle: 'bold' },
+          { token: 'string',     foreground: '3ddc84' },
+          { token: 'number',     foreground: 'f0c040' },
+          { token: 'type',       foreground: 'c792ea' },
+          { token: 'function',   foreground: '82aaff' },
+          { token: 'variable',   foreground: 'cdd9e5' },
+          { token: 'operator',   foreground: '89ca78' },
+          { token: 'tag',        foreground: 'ff4c6a' },
+          { token: 'attribute.name',  foreground: '82aaff' },
+          { token: 'attribute.value', foreground: '3ddc84' },
+        ],
+        colors: {
+          'editor.background':           '#080b0f',
+          'editor.foreground':           '#cdd9e5',
+          'editorLineNumber.foreground': '#3d5266',
+          'editorLineNumber.activeForeground': '#768a9e',
+          'editor.lineHighlightBackground': '#0d1117',
+          'editorCursor.foreground':     '#00d4ff',
+          'editor.selectionBackground':  '#1e3a4a',
+          'editorIndentGuide.background':'#161f2b',
+          'editorIndentGuide.activeBackground': '#1e2d3d',
+          'scrollbarSlider.background':  '#1c2736',
+          'scrollbarSlider.hoverBackground':'#253545',
+          'editorBracketMatch.background':'#00d4ff22',
+          'editorBracketMatch.border':   '#00d4ff',
+        }
+      });
+
+      monacoEditor = monaco.editor.create(document.getElementById('monaco-container'), {
+        theme: 'void-dark',
+        fontSize: 13,
+        fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+        fontLigatures: true,
+        lineNumbers: 'on',
+        minimap: { enabled: true, scale: 1 },
+        scrollBeyondLastLine: false,
+        wordWrap: 'off',
+        automaticLayout: true,
+        renderWhitespace: 'selection',
+        smoothScrolling: true,
+        cursorBlinking: 'phase',
+        cursorSmoothCaretAnimation: 'on',
+        bracketPairColorization: { enabled: true },
+        renderLineHighlight: 'line',
+        padding: { top: 8, bottom: 8 },
+        model: null,
+      });
+
+      // Update status bar on cursor move
+      monacoEditor.onDidChangeCursorPosition(e => {
+        const p = e.position;
+        document.getElementById('sb-pos').textContent = `Ln ${p.lineNumber}, Col ${p.column}`;
+      });
+
+      // Mark tab dirty on edit
+      monacoEditor.onDidChangeModelContent(() => {
+        if (activeTab) {
+          const tab = openTabs.find(t=>t.path===activeTab);
+          if (tab && !tab.dirty) { tab.dirty = true; renderTabs(); }
+        }
+      });
+
+      document.getElementById('empty-state').style.display = 'none';
+      resolve();
+    });
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  FILE TREE
+// ═══════════════════════════════════════════════════════════════════
+let treeExpanded = new Set(['/']);
+
+async function refreshTree() {
+  const el = document.getElementById('filetree');
+  el.innerHTML = '';
+  await buildTree('/', el, 0);
+}
+
+async function buildTree(dir, container, depth) {
+  let items;
+  try { items = await fsReaddir(dir); }
+  catch { return; }
+
+  items.sort((a,b) => a.localeCompare(b));
+
+  // Dirs first
+  const stats = await Promise.all(items.map(i => fsStat(joinPath(dir,i)).catch(()=>null)));
+  const sorted = items.map((n,i)=>({n,s:stats[i]}))
+    .sort((a,b) => {
+      const ad = a.s && a.s.isDirectory(); const bd = b.s && b.s.isDirectory();
+      if (ad && !bd) return -1; if (!ad && bd) return 1;
+      return a.n.localeCompare(b.n);
+    });
+
+  for (const {n, s} of sorted) {
+    if (!s) continue;
+    const path = joinPath(dir, n);
+    const isDir = s.isDirectory();
+    const el = document.createElement('div');
+    el.className = 'tree-item' + (path===activeTab?' selected':'');
+    el.dataset.path = path;
+
+    const indent = document.createElement('span');
+    indent.className = 'tree-indent';
+    indent.style.width = (depth * 14 + 6) + 'px';
+
+    const icon = document.createElement('span');
+    icon.className = 'tree-icon';
+    icon.innerHTML = isDir ? (treeExpanded.has(path) ? '📂' : '📁') : getFileIcon(n);
+
+    const name = document.createElement('span');
+    name.className = 'tree-name';
+    name.textContent = n;
+
+    el.appendChild(indent);
+    el.appendChild(icon);
+    el.appendChild(name);
+
+    el.addEventListener('click', async e => {
+      e.stopPropagation();
+      if (isDir) {
+        treeExpanded.has(path) ? treeExpanded.delete(path) : treeExpanded.add(path);
+        await refreshTree();
+      } else {
+        await openFile(path);
+      }
+    });
+
+    el.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      showCtxMenu(e.clientX, e.clientY, path, isDir);
+    });
+
+    el.addEventListener('dblclick', e => {
+      e.stopPropagation();
+      if (!isDir) startRename(el, path);
+    });
+
+    container.appendChild(el);
+
+    if (isDir && treeExpanded.has(path)) {
+      await buildTree(path, container, depth+1);
+    }
+  }
+}
+
+function getFileIcon(name) {
+  const ext = name.split('.').pop().toLowerCase();
+  const map = {
+    html:'<span class="ic-html">⟨/⟩</span>',
+    css: '<span class="ic-css">🎨</span>',
+    js:  '<span class="ic-js">JS</span>',
+    ts:  '<span class="ic-ts">TS</span>',
+    json:'<span class="ic-json">{}</span>',
+    md:  '<span class="ic-md">📝</span>',
+    txt: '<span class="ic-txt">📄</span>',
+    xml: '<span class="ic-xml">XML</span>',
+    png: '<span class="ic-img">🖼</span>',
+    jpg: '<span class="ic-img">🖼</span>',
+    svg: '<span class="ic-img">🖼</span>',
+  };
+  return map[ext] || '📄';
+}
+
+function joinPath(...parts) {
+  return ('/' + parts.map(p=>p.replace(/^\/+|\/+$/g,'')).filter(Boolean).join('/')).replace(/\/+/g,'/') || '/';
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  OPEN / CLOSE FILES + TABS
+// ═══════════════════════════════════════════════════════════════════
+async function openFile(path) {
+  let existing = openTabs.find(t=>t.path===path);
+  if (!existing) {
+    let content = '';
+    try { content = await fsReadFile(path); } catch(e) { content = ''; }
+    const lang = getLang(path);
+    const model = monaco.editor.createModel(content, lang, monaco.Uri.file(path));
+    existing = { path, model, dirty: false };
+    openTabs.push(existing);
+  }
+  activeTab = path;
+  monacoEditor.setModel(existing.model);
+  document.getElementById('empty-state').style.display = 'none';
+  renderTabs();
+  await refreshTree();
+  updateStatusBar(path);
+  monacoEditor.focus();
+}
+
+function closeTab(path) {
+  const idx = openTabs.findIndex(t=>t.path===path);
+  if (idx<0) return;
+  const tab = openTabs[idx];
+  function _doClose() {
+    tab.model.dispose();
+    openTabs.splice(idx,1);
+    if (activeTab===path) {
+      activeTab = openTabs[Math.min(idx, openTabs.length-1)]?.path || null;
+      if (activeTab) {
+        monacoEditor.setModel(openTabs.find(t=>t.path===activeTab).model);
+        updateStatusBar(activeTab);
+      } else {
+        monacoEditor.setModel(null);
+        document.getElementById('empty-state').style.display = 'flex';
+        document.getElementById('sb-file').textContent = 'No file open';
+        document.getElementById('sb-lang').textContent = '—';
+      }
+    }
+    renderTabs();
+    refreshTree();
+  }
+  if (tab.dirty) {
+    showConfirm('Save changes to ' + path.split('/').pop() + ' before closing?', '', _doClose);
+  } else {
+    _doClose();
+  }
+}
+
+function renderTabs() {
+  const bar = document.getElementById('tabs-bar');
+  bar.innerHTML = '';
+  for (const tab of openTabs) {
+    const name = tab.path.split('/').pop();
+    const el = document.createElement('div');
+    el.className = 'tab' + (tab.path===activeTab?' active':'');
+    el.innerHTML = `
+      <span class="tab-icon">${getFileIconPlain(name)}</span>
+      <span class="tab-name">${name}</span>
+      ${tab.dirty ? '<span class="tab-dot"></span>' : ''}
+      <span class="tab-close" data-path="${tab.path}">×</span>`;
+    el.addEventListener('click', e => {
+      if (e.target.classList.contains('tab-close')) { closeTab(e.target.dataset.path); return; }
+      openFile(tab.path);
+    });
+    bar.appendChild(el);
+  }
+}
+
+function getFileIconPlain(name) {
+  const ext = name.split('.').pop().toLowerCase();
+  return {html:'🌐',css:'🎨',js:'✨',ts:'🔷',json:'📋',md:'📝',txt:'📄'}[ext]||'📄';
+}
+
+function getLang(path) {
+  const ext = path.split('.').pop().toLowerCase();
+  return {html:'html',css:'css',js:'javascript',ts:'typescript',json:'json',md:'markdown',xml:'xml',txt:'plaintext',py:'python'}[ext]||'plaintext';
+}
+
+function updateStatusBar(path) {
+  const name = path.split('/').pop();
+  const lang = getLang(path);
+  document.getElementById('sb-file').textContent = path;
+  document.getElementById('sb-lang').textContent = lang.toUpperCase();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  SAVE
+// ═══════════════════════════════════════════════════════════════════
+async function saveCurrentFile() {
+  if (!activeTab) return;
+  const tab = openTabs.find(t=>t.path===activeTab);
+  if (!tab) return;
+  const content = tab.model.getValue();
+  try {
+    await fsWriteFileSafe(activeTab, content);
+    tab.dirty = false;
+    renderTabs();
+    termLog('sys', `Saved: ${activeTab}`);
+  } catch(e) {
+    termLog('error', 'Save failed: '+e.message);
+  }
+}
+
+async function saveAll() {
+  for (const tab of openTabs) {
+    if (!tab.dirty) continue;
+    await fsWriteFileSafe(tab.path, tab.model.getValue());
+    tab.dirty = false;
+  }
+  renderTabs();
+  termLog('sys', 'All files saved.');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  RUN
+// ═══════════════════════════════════════════════════════════════════
+async function runCurrentFile() {
+  await saveCurrentFile();
+  if (!activeTab) return;
+  const ext = activeTab.split('.').pop().toLowerCase();
+  if (ext === 'html' || ext === 'htm') {
+    await runProject(activeTab);  // routes to about:blank or srcdoc based on knownProjectDir
+  } else if (ext === 'js' || ext === 'mjs') {
+    await runJS(activeTab);
+  } else if (ext === 'css') {
+    termLog('info', 'CSS cannot be run standalone. Open an HTML file that links it.');
+  } else {
+    termLog('warn', 'No runner for .' + ext + ' files.');
+  }
+}
+
+async function runProjectIndex() {
+  await saveAll();
+  // Find the best HTML entry point: active tab, index.html in shared map, or VFS index.html
+  let entry = null;
+  if (activeTab && /\.(html|htm)$/i.test(activeTab)) {
+    entry = activeTab;
+  } else {
+    for (const [vp] of sharedFileMap) {
+      if (vp.endsWith('/index.html') || vp === 'index.html') { entry = '/' + vp; break; }
+    }
+    if (!entry && await fsExists('/index.html').catch(()=>false)) entry = '/index.html';
+  }
+  if (!entry) { termLog('warn', 'No HTML file found. Create an index.html first.'); return; }
+  await runProject(entry);
+}
+
+
+// ═══════════════════════════════════════════════════════════════════
+//  ASSET RESOLUTION ENGINE
+//  All assets are read via sharedFileMap handles or VFS.
+//  file:// URLs are NEVER emitted — everything becomes inline or blob:.
+// ═══════════════════════════════════════════════════════════════════
+
+// Resolve a src string to a sharedFileMap entry, trying multiple strategies
+function resolveEntry(src, htmlVPath) {
+  // Strip file:// prefix and leading slashes for lookup
+  const stripped = src.replace(/^file:\/\/\//, '').replace(/^file:\/\//, '').replace(/^\/+/, '');
+  // 1. Direct lookup
+  let entry = sharedMapLookup(src) || sharedMapLookup(stripped);
+  if (entry) return entry;
+  // 2. Resolve relative path against HTML vPath
+  if (htmlVPath && /^\.\.?\//.test(src)) {
+    const resolved = resolveRelVPath(htmlVPath, src.replace(/^\.\//, ''));
+    entry = sharedFileMap.get(resolved);
+    if (entry) return entry;
+  }
+  // 3. VFS check (caller will try VFS separately)
+  return null;
+}
+
+// Read any asset as text, from handle or VFS
+async function readAssetText(src, baseDir) {
+  const filePath = src.startsWith('/') ? src : joinPath(baseDir, src);
+  const stripped = filePath.replace(/^\/+/, '');
+  const entry = sharedMapLookup(src) || sharedMapLookup(stripped);
+  if (entry) {
+    try { const f = await entry.handle.getFile(); return await f.text(); } catch(e) {}
+  }
+  try { return await fsReadFile(filePath); } catch(e) { return null; }
+}
+
+
+// ═══════════════════════════════════════════════════════════════════
+//  RECURSIVE ASSET BUNDLER
+//  Reads every asset via sharedFileMap handles or VFS.
+//  No file:// URLs are ever emitted — everything becomes inline or blob:.
+//
+//  Strategy:
+//   - Binary assets (images, fonts, etc.) → data: URI, inlined in place
+//   - CSS files → inlined as <style>, with their url() assets also inlined
+//   - JS/MJS modules → bundled recursively: imports rewritten to blob: URLs
+//   - All other text → inlined directly
+// ═══════════════════════════════════════════════════════════════════
+
+const BIN_EXTS  = new Set(['png','jpg','jpeg','gif','webp','avif','bmp','ico',
+  'woff','woff2','ttf','otf','eot','mp3','mp4','wav','ogg','webm','flac','aac',
+  'opus','avi','mov','pdf','zip','gz']);
+const TEXT_EXTS = new Set(['js','mjs','cjs','ts','jsx','tsx','css','json','jsonld',
+  'xml','svg','txt','md','yaml','yml','toml','sh','py','rb','php','java','c','cpp',
+  'h','rs','go','swift','kt','dart','r','sql','graphql']);
+
+// Read raw bytes from handle or VFS, return ArrayBuffer or null
+async function readRawBytes(vPath) {
+  const entry = sharedMapLookup(vPath);
+  if (entry) {
+    try { return await (await entry.handle.getFile()).arrayBuffer(); } catch(e) {}
+  }
+  // VFS
+  try {
+    const content = await fsReadFile(vPath.startsWith('/') ? vPath : '/' + vPath);
+    if (typeof content === 'string' && content.startsWith('data:') && content.includes(';base64,')) {
+      const b64 = content.split(';base64,')[1];
+      const bin = atob(b64);
+      const buf = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+      return buf.buffer;
+    }
+    // text stored as string — encode to bytes
+    return new TextEncoder().encode(content).buffer;
+  } catch(e) { return null; }
+}
+
+// Read text from handle or VFS
+async function readRawText(vPath) {
+  const entry = sharedMapLookup(vPath);
+  if (entry) {
+    try { return await (await entry.handle.getFile()).text(); } catch(e) {}
+  }
+  try {
+    return await fsReadFile(vPath.startsWith('/') ? vPath : '/' + vPath);
+  } catch(e) { return null; }
+}
+
+// Convert ArrayBuffer to base64
+function bufToB64(buf) {
+  const bytes = new Uint8Array(buf);
+  let b64 = ''; const chunk = 8192;
+  for (let i = 0; i < bytes.length; i += chunk)
+    b64 += String.fromCharCode.apply(null, bytes.subarray(i, Math.min(i + chunk, bytes.length)));
+  return btoa(b64);
+}
+
+// Resolve a src string (relative, absolute, file://) to a vPath key usable with sharedFileMap/VFS
+// htmlVPath: the vPath of the HTML file (e.g. "browserbench.org/Speedometer3.1/index.html")
+function resolveSrc(src, htmlVPath) {
+  // Already absolute non-local → return as-is (caller will skip)
+  if (/^https?:\/\/|^data:|^blob:/.test(src)) return src;
+  // Strip file:// to get an absolute disk path, then match against sharedFileMap
+  if (src.startsWith('file://')) {
+    const stripped = src.replace(/^file:\/\/\//, '').replace(/^file:\/\//, '');
+    return stripped; // sharedMapLookup will do tail matching
+  }
+  if (!htmlVPath) return src;
+  // Relative path — resolve against HTML's directory
+  const base = htmlVPath.split('/').slice(0, -1);
+  const parts = src.replace(/^\.\//, '').split('/');
+  const stack = [...base];
+  for (const p of parts) {
+    if (p === '..') stack.pop();
+    else if (p !== '.') stack.push(p);
+  }
+  return stack.join('/');
+}
+
+// Read a binary asset and return a data: URI
+async function assetToDataUri(src, htmlVPath) {
+  const vPath = resolveSrc(src, htmlVPath);
+  if (/^https?:|^data:|^blob:/.test(vPath)) return null; // external, skip
+  const ext = vPath.split('.').pop().toLowerCase();
+  const buf = await readRawBytes(vPath);
+  if (!buf) return null;
+  return 'data:' + getMime(ext) + ';base64,' + bufToB64(buf);
+}
+
+// Inline CSS url() references (fonts, images) recursively
+async function inlineCssUrls(css, cssVPath) {
+  const urlRe = /url\(\s*(['"]?)(?!https?:|data:|blob:|#)([^)'"#\s]+)\1\s*\)/gi;
+  const hits = [];
+  let m;
+  while ((m = urlRe.exec(css)) !== null) {
+    hits.push({ full: m[0], src: m[2].trim() });
+  }
+  for (const { full, src } of hits) {
+    const dataUri = await assetToDataUri(src, cssVPath);
+    if (dataUri) css = css.split(full).join('url("' + dataUri + '")');
+  }
+  return css;
+}
+
+// Module bundler cache: vPath → blob: URL (avoids re-processing)
+let _blobCache = {};
+
+// Recursively bundle a JS/MJS module: rewrite all imports to blob: URLs
+// Returns the blob: URL for this module
+async function bundleModule(src, baseVPath) {
+  const vPath = resolveSrc(src, baseVPath);
+  if (/^https?:|^blob:/.test(vPath)) return vPath; // external or already blob
+  if (_blobCache[vPath]) return _blobCache[vPath];
+
+  // Reserve spot to prevent infinite recursion
+  _blobCache[vPath] = '__pending__';
+
+  let text = await readRawText(vPath);
+  if (text === null) {
+    termLog('warn', '  ✗ module not found: ' + (vPath.split('/').pop() || vPath));
+    delete _blobCache[vPath];
+    return src;
+  }
+
+  // Collect all static import/export from '...' and dynamic import('...') specifiers
+  // We collect them first, then process in reverse so offsets stay valid
+  const importRe = /\b(import|export)\s[^'"]*?from\s*(['"])((?!https?:|blob:|data:)[^'"]+)\2|import\s*\(\s*(['"])((?!https?:|blob:|data:)[^'"]+)\4\s*\)/g;
+  const replacements = [];
+  let im;
+  while ((im = importRe.exec(text)) !== null) {
+    const depSrc = im[3] || im[5]; // static or dynamic
+    const quote  = im[2] || im[4];
+    if (!depSrc) continue;
+    replacements.push({ offset: im.index, length: im[0].length, full: im[0], quote, depSrc });
+  }
+
+  // Process in reverse to preserve offsets
+  for (let i = replacements.length - 1; i >= 0; i--) {
+    const { offset, length, full, quote, depSrc } = replacements[i];
+    const blobUrl = await bundleModule(depSrc, vPath);
+    const newFull = full.replace(quote + depSrc + quote, quote + blobUrl + quote);
+    text = text.slice(0, offset) + newFull + text.slice(offset + length);
+  }
+
+  // Rewrite binary asset references inside the module (CSS url(), string literals for images)
+  // These become data URIs so they work in the blob: context
+  const assetRe = /(['"])((?:\.\.?\/)[^'"]+\.(png|jpg|jpeg|gif|webp|bmp|ico|svg|woff2?|ttf|otf))\1/gi;
+  const assetHits = [];
+  let am;
+  while ((am = assetRe.exec(text)) !== null) {
+    assetHits.push({ offset: am.index, length: am[0].length, quote: am[1], assetSrc: am[2] });
+  }
+  for (let i = assetHits.length - 1; i >= 0; i--) {
+    const { offset, length, quote, assetSrc } = assetHits[i];
+    const dataUri = await assetToDataUri(assetSrc, vPath);
+    if (dataUri) {
+      text = text.slice(0, offset) + quote + dataUri + quote + text.slice(offset + length);
+    }
+  }
+
+  const blob = new Blob([text], { type: 'text/javascript' });
+  const url = URL.createObjectURL(blob);
+  _blobCache[vPath] = url;
+  termLog('sys', '  ✓ bundled: ' + (vPath.split('/').pop() || vPath) + ' → blob:');
+  return url;
+}
+
+// Inline all <link rel=stylesheet> and <script src> in HTML
+// Also handles <img src>, <source src>, CSS url(), and import chains
+async function fullyInlineHTML(html, htmlVPath) {
+  _blobCache = {}; // reset per-run cache
+
+  // ── 1. Inline <link rel="stylesheet" href="..."> ──────────────
+  html = await replaceAsync(html,
+    /<link([^>]*\brel\s*=\s*["']stylesheet["'][^>]*)>/gi,
+    async (full, attrs) => {
+      const hm = /\bhref\s*=\s*["']([^"']+)["']/.exec(attrs);
+      if (!hm) return full;
+      const src = hm[1];
+      if (/^https?:|^data:|^blob:/.test(src)) return full;
+      let css = await readRawText(resolveSrc(src, htmlVPath));
+      if (css === null) return full;
+      css = await inlineCssUrls(css, resolveSrc(src, htmlVPath));
+      termLog('sys', '  ✓ css: ' + src.split('/').pop());
+      return '<style>/* ' + src.split('/').pop() + ' */\n' + css + '\n</style>';
+    }
+  );
+
+  // ── 2. Inline <script src="..."> ─────────────────────────────
+  // Match full <script ...>...</script> blocks so we can replace the whole thing
+  html = await replaceAsync(html,
+    /<script([^>]*)><\/script>|<script([^>]*)>\s*<\/script>/gi,
+    async (full, attrs1, attrs2) => {
+      const attrs = attrs1 || attrs2 || '';
+      const sm = /\bsrc\s*=\s*["']([^"']+)["']/.exec(attrs);
+      if (!sm) return full;
+      const src = sm[1];
+      if (/^https?:|^data:|^blob:/.test(src)) return full;
+      const isModule = /\btype\s*=\s*["']module["']/i.test(attrs);
+      if (isModule) {
+        const blobUrl = await bundleModule(src, htmlVPath);
+        return '<script type="module">import ' + JSON.stringify(blobUrl) + ';<' + '/script>';
+      }
+      const text = await readRawText(resolveSrc(src, htmlVPath));
+      if (text === null) return full;
+      termLog('sys', '  ✓ script: ' + src.split('/').pop());
+      return '<script>\n' + text + '\n<' + '/script>';
+    }
+  );
+  // Also handle <script src="..."> that is NOT self-closing (has content between tags)
+  html = await replaceAsync(html,
+    /<script([^>]+src\s*=\s*["'][^"']+["'][^>]*)>([\s\S]*?)<\/script>/gi,
+    async (full, attrs, _inner) => {
+      const sm = /\bsrc\s*=\s*["']([^"']+)["']/.exec(attrs);
+      if (!sm) return full;
+      const src = sm[1];
+      if (/^https?:|^data:|^blob:/.test(src)) return full;
+      const isModule = /\btype\s*=\s*["']module["']/i.test(attrs);
+      if (isModule) {
+        const blobUrl = await bundleModule(src, htmlVPath);
+        return '<script type="module">import ' + JSON.stringify(blobUrl) + ';<' + '/script>';
+      }
+      const text = await readRawText(resolveSrc(src, htmlVPath));
+      if (text === null) return full;
+      termLog('sys', '  ✓ script: ' + src.split('/').pop());
+      return '<script>\n' + text + '\n<' + '/script>';
+    }
+  );
+
+  // ── 3. Inline <img src>, <source src>, <video poster> etc. ───
+  html = await replaceAsync(html,
+    /(<(?:img|source|video|audio|track|input)[^>]*)\s(src|poster|srcset)\s*=\s*["']([^"']+)["']/gi,
+    async (full, tagStart, attr, src) => {
+      if (/^https?:|^data:|^blob:/.test(src)) return full;
+      const ext = src.split('.').pop().split('?')[0].toLowerCase();
+      if (!BIN_EXTS.has(ext)) return full;
+      const dataUri = await assetToDataUri(src, htmlVPath);
+      if (!dataUri) return full;
+      termLog('sys', '  ✓ img: ' + src.split('/').pop());
+      return tagStart + ' ' + attr + '="' + dataUri + '"';
+    }
+  );
+
+  // ── 4. Inline CSS url() in <style> blocks ────────────────────
+  html = await replaceAsync(html,
+    /(<style[^>]*>)([\s\S]*?)(<\/style>)/gi,
+    async (full, open, css, close) => {
+      const inlined = await inlineCssUrls(css, htmlVPath);
+      return open + inlined + close;
+    }
+  );
+
+  // ── 5. Inline inline style attributes with url() ─────────────
+  html = await replaceAsync(html,
+    /\bstyle\s*=\s*["']([^"']*url\([^)]+\)[^"']*)["']/gi,
+    async (full, styleVal) => {
+      const inlined = await inlineCssUrls(styleVal, htmlVPath);
+      return 'style="' + inlined + '"';
+    }
+  );
+
+  // ── 6. Handle any remaining file:// refs (absolute paths left in HTML) ──
+  html = await replaceAsync(html,
+    /(['"])file:\/\/([^'"]+)\1/g,
+    async (full, q, path) => {
+      const ext = path.split('.').pop().toLowerCase();
+      if (BIN_EXTS.has(ext)) {
+        const dataUri = await assetToDataUri('file://' + path, htmlVPath);
+        if (dataUri) return q + dataUri + q;
+      } else if (TEXT_EXTS.has(ext)) {
+        // For remaining text file:// refs (e.g. in fetch() calls, handled by bridge)
+        return full; // fetch bridge will serve from VFS/sharedMap
+      }
+      return full;
+    }
+  );
+
+  return html;
+}
+
+// Helper: async version of String.replace
+async function replaceAsync(str, re, asyncFn) {
+  const matches = [];
+  let m;
+  const reCopy = new RegExp(re.source, re.flags);
+  while ((m = reCopy.exec(str)) !== null) {
+    matches.push({ index: m.index, length: m[0].length, args: m });
+    if (!re.global) break;
+  }
+  // Process all matches in parallel
+  const results = await Promise.all(matches.map(({ args }) => asyncFn(...args)));
+  // Rebuild string in reverse
+  let out = str;
+  for (let i = matches.length - 1; i >= 0; i--) {
+    const { index, length } = matches[i];
+    out = out.slice(0, index) + results[i] + out.slice(index + length);
+  }
+  return out;
+}
+
+// ── Resolve a relative path against a vPath ───────────────────────
+function resolveRelVPath(basePath, rel) {
+  const base = basePath.split('/').slice(0, -1);
+  const parts = rel.split('/');
+  const stack = [...base];
+  for (const p of parts) {
+    if (p === '..') stack.pop();
+    else if (p !== '.') stack.push(p);
+  }
+  return stack.join('/');
+}
+
+// Find the vPath of an HTML file in sharedFileMap
+function findHtmlVPath(htmlPath) {
+  const name = htmlPath.split('/').filter(Boolean).pop();
+  for (const [vp] of sharedFileMap) {
+    if (vp.endsWith('/' + name) || vp === name) return vp;
+  }
+  return htmlPath.replace(/^\/+/, '');
+}
+
+// ── Main runHTML ──────────────────────────────────────────────────
+async function runHTML(htmlPath) {
+  switchPanelTab('preview');
+  termLog('sys', 'Running: ' + htmlPath);
+  try {
+    // Read the source HTML — from shared handle if available, else VFS
+    const strippedPath = htmlPath.replace(/^\/+/, '');
+    const srcEntry = sharedMapLookup(strippedPath);
+    let html;
+    if (srcEntry) {
+      html = await (await srcEntry.handle.getFile()).text();
+    } else {
+      html = await fsReadFile(htmlPath);
+    }
+
+    // Determine the HTML file's vPath in sharedFileMap for accurate relative resolution
+    const htmlVPath = sharedFileMap.size > 0 ? findHtmlVPath(htmlPath) : strippedPath;
+
+    termLog('sys', 'Bundling assets for: ' + (htmlVPath || htmlPath));
+
+    // Fully inline all local assets (recursive, no file:// URLs emitted)
+    html = await fullyInlineHTML(html, htmlVPath);
+
+    // Inject console bridge + postMessage fetch bridge
+    const CT = '<' + '/script>';
+    const consoleSrc = '(function(){'
+      + 'var _={log:console.log,warn:console.warn,error:console.error,info:console.info};'
+      + 'function p(l,a){try{parent.postMessage({__void:true,level:l,msg:a.map(function(x){'
+      + 'try{return typeof x==="object"?JSON.stringify(x,null,2):String(x);}catch(ee){return String(x);}'
+      + '}).join(" ")},"*");}catch(ee){}}'
+      + 'console.log=function(){_.log.apply(console,arguments);p("log",[].slice.call(arguments));};'
+      + 'console.warn=function(){_.warn.apply(console,arguments);p("warn",[].slice.call(arguments));};'
+      + 'console.error=function(){_.error.apply(console,arguments);p("error",[].slice.call(arguments));};'
+      + 'console.info=function(){_.info.apply(console,arguments);p("info",[].slice.call(arguments));};'
+      + 'window.onerror=function(m,s,l){p("error",["Uncaught: "+m+" (line "+l+")"]);};'
+      + 'window.addEventListener("unhandledrejection",function(e){p("error",["Promise: "+String(e.reason)]);});'
+      + '})();';
+
+    const bridges = '<script>' + consoleSrc + CT + '<script>' + buildFetchBridge() + CT;
+
+    if (/<head[\s>]/i.test(html)) {
+      html = html.replace(/(<head[^>]*>)/i, '$1' + bridges);
+    } else if (/<body[\s>]/i.test(html)) {
+      html = html.replace(/(<body[^>]*>)/i, '$1' + bridges);
+    } else {
+      html = bridges + html;
+    }
+
+    document.getElementById('preview-frame').srcdoc = html;
+    termLog('info', 'Preview ready ✓');
+  } catch(e) {
+    termLog('error', 'Run failed: ' + e.message);
+    console.error(e);
+  }
+}
+
+// ── Popout preview (also uses fully inlined HTML) ─────────────────
+async function popoutPreview() {
+  const popup = window.open('about:blank', '_blank',
+    'width=900,height=650,toolbar=0,menubar=0,location=0,status=0,scrollbars=1,resizable=1');
+  if (!popup) { termLog('warn', 'Popup blocked — allow popups for this page.'); return; }
+
+  const frame = document.getElementById('preview-frame');
+  if (frame && frame.srcdoc) {
+    popup.document.open();
+    popup.document.write(frame.srcdoc);
+    popup.document.close();
+    termLog('sys', 'Preview opened in popup window.');
+  } else if (activeTab) {
+    await saveCurrentFile();
+    const ext = activeTab.split('.').pop().toLowerCase();
+    if (ext === 'html') {
+      try {
+        const strippedPath = activeTab.replace(/^\/+/, '');
+        const srcEntry = sharedMapLookup(strippedPath);
+        let html = srcEntry
+          ? await (await srcEntry.handle.getFile()).text()
+          : await fsReadFile(activeTab);
+        const htmlVPath = sharedFileMap.size > 0 ? findHtmlVPath(activeTab) : strippedPath;
+        html = await fullyInlineHTML(html, htmlVPath);
+        popup.document.open();
+        popup.document.write(html);
+        popup.document.close();
+        termLog('sys', 'Popup preview ready ✓');
+      } catch(e) { termLog('error', 'Popout failed: ' + e.message); }
+    } else {
+      termLog('info', 'Popup opened (no HTML active).');
+    }
+  } else {
+    termLog('info', 'Popup opened (no file open).');
+  }
+}
+
+// ── Scan for file:// refs (still useful to detect them for logging) ──
+function scanForFileUrls(text) {
+  const found = new Set();
+  const re = /file:\/\/([^\s"'<>)]+)/g;
+  let m;
+  while ((m = re.exec(text)) !== null) found.add('file://' + m[1].replace(/[,;)'">\s]+$/, ''));
+  return [...found];
+}
+
+// ── Project directory (disk path) for about:blank native loading ──
+// When set, Run opens a real window with <base href="file:///..."> so
+// relative imports like ./benchmark-runner.mjs resolve natively.
+let knownProjectDir = null; // e.g. "/home/villa/Downloads/browserbench.org/Speedometer3.1"
+
+// Normalize a disk path → file:// base URL ending with /
+function diskPathToFileUrl(p) {
+  p = p.replace(/\\/g, '/').replace(/\/+$/, '');
+  if (/^[a-zA-Z]:/.test(p)) return 'file:///' + p + '/';   // Windows
+  return 'file://' + p + '/';                               // Unix/Mac
+}
+
+// Try to auto-detect the project dir from file:// URLs already in the HTML
+function guessProjectDir(html) {
+  const urls = scanForFileUrls(html);
+  if (!urls.length) return null;
+  // Take the first file:// URL's directory
+  const p = urls[0].replace(/^file:\/\/\//, '/').replace(/^file:\/\//, '/');
+  return p.replace(/\/[^/]+$/, ''); // strip filename
+}
+
+// Show a dialog asking the user for their project directory path
+function askProjectDir(prefill, onSet) {
+  let subtitleEl = document.getElementById('dialog-subtitle');
+  if (!subtitleEl) {
+    subtitleEl = document.createElement('p');
+    subtitleEl.id = 'dialog-subtitle';
+    subtitleEl.style.cssText = 'font-size:11px;color:var(--text-dim);margin-bottom:12px;';
+    document.getElementById('dialog').insertBefore(subtitleEl, document.querySelector('.dialog-btns'));
+  }
+  subtitleEl.style.display = '';
+  subtitleEl.innerHTML =
+    'Enter the <b>absolute path</b> to the project folder on disk.<br>' +
+    'The IDE will open runs in a real window using <span style="color:var(--accent)">file://</span> — ' +
+    'all relative imports resolve natively.<br>' +
+    '<span style="color:var(--text-faint);font-size:10px">' +
+    'e.g.&nbsp; /home/me/myproject &nbsp;or&nbsp; C:/Users/me/myproject</span>';
+
+  document.getElementById('dialog-title').textContent = '📁 Set Project Directory';
+  document.getElementById('dialog-ok').textContent = 'Set & Run';
+  const inp = document.getElementById('dialog-input');
+  inp.value = prefill || knownProjectDir || '';
+  inp.placeholder = '/home/me/myproject';
+  inp.style.display = '';
+  document.getElementById('dialog-overlay').classList.add('visible');
+  inp.focus(); inp.select();
+
+  dialogCallback = async (val) => {
+    val = val.trim().replace(/[/\\]+$/, '');
+    if (!val) return;
+    knownProjectDir = val;
+    subtitleEl.style.display = 'none';
+    document.getElementById('dialog-ok').textContent = 'Create';
+    termLog('sys', 'Project dir: ' + knownProjectDir);
+    updateDirButtonUI();
+    if (onSet) onSet(knownProjectDir);
+  };
+}
+
+// ── Run in about:blank with file:// base ─────────────────────────
+// Opens a real browser window, writes raw HTML + <base> tag.
+// No bundling needed — the browser resolves all relative paths natively.
+async function runInBlank(htmlPath, projectDir) {
+  const strippedPath = htmlPath.replace(/^\/+/, '');
+  const srcEntry = sharedMapLookup(strippedPath);
+  let html;
+  if (srcEntry) {
+    html = await (await srcEntry.handle.getFile()).text();
+  } else {
+    html = await fsReadFile(htmlPath);
+  }
+
+  const baseUrl = diskPathToFileUrl(projectDir);
+  const baseTag = '<base href="' + baseUrl + '">';
+
+  // Inject base tag at top of <head>, or prepend if no <head>
+  if (/<head[\s>]/i.test(html)) {
+    html = html.replace(/(<head[^>]*>)/i, '$1' + baseTag);
+  } else if (/<html[\s>]/i.test(html)) {
+    html = html.replace(/(<html[^>]*>)/i, '$1<head>' + baseTag + '</head>');
+  } else {
+    html = baseTag + html;
+  }
+
+  const popup = window.open('about:blank', '_blank',
+    'width=1024,height=768,toolbar=1,menubar=0,location=1,status=0,scrollbars=1,resizable=1');
+  if (!popup) {
+    termLog('warn', 'Popup blocked — allow popups for this site and try again.');
+    return;
+  }
+  popup.document.open();
+  popup.document.write(html);
+  popup.document.close();
+  termLog('info', 'Opened in window: ' + baseUrl + pathBasename(htmlPath));
+}
+
+// ── Smart Run: use about:blank+file:// if project dir known, else srcdoc bundler ──
+async function runProject(htmlPath) {
+  if (!htmlPath) {
+    // fallback: find active HTML tab
+    if (!activeTab) { termLog('warn', 'No file open.'); return; }
+    htmlPath = activeTab;
+  }
+  const ext = htmlPath.split('.').pop().toLowerCase();
+  if (ext !== 'html' && ext !== 'htm') { await runJS(htmlPath); return; }
+
+  // Check if the HTML has file:// refs we can use to auto-detect project dir
+  let html;
+  try {
+    const strippedPath = htmlPath.replace(/^\/+/, '');
+    const srcEntry = sharedMapLookup(strippedPath);
+    html = srcEntry
+      ? await (await srcEntry.handle.getFile()).text()
+      : await fsReadFile(htmlPath);
+  } catch(e) { html = ''; }
+
+  // Auto-detect project dir from file:// refs in source if not already set
+  if (!knownProjectDir) {
+    const guessed = guessProjectDir(html);
+    if (guessed) { knownProjectDir = guessed; updateDirButtonUI(); }
+  }
+
+  if (knownProjectDir) {
+    // We know the dir — open natively in about:blank with file:// base
+    await runInBlank(htmlPath, knownProjectDir);
+  } else {
+    // No dir known: check if there are unresolvable file:// refs → ask user
+    const fileUrls = scanForFileUrls(html);
+    const hasUnresolved = fileUrls.some(u => !sharedMapLookup(u));
+    const hasRelModules = /import\s*['"]\.\.?\//.test(html) || /type\s*=\s*["']module["']/.test(html);
+
+    if (hasUnresolved || hasRelModules) {
+      // Ask for project dir, then open in blank
+      const guessed = guessProjectDir(html);
+      askProjectDir(guessed, async (dir) => {
+        await runInBlank(htmlPath, dir);
+      });
+    } else {
+      // No external refs — safe to use srcdoc bundler inline
+      await runHTML(htmlPath);
+    }
+  }
+}
+
+// ── ensureSharedMapForFileUrls: stub (kept for compat) ──
+async function ensureSharedMapForFileUrls(fileUrls, relPaths) {
+  relPaths = relPaths || [];
+  const unresolvedFile = fileUrls.filter(u => !sharedMapLookup(u));
+  if (!unresolvedFile.length) return true;
+  termLog('warn', unresolvedFile.length + ' file:// ref(s) not in Shared Files — open the folder via 🖥️ panel to grant access');
+  return false;
+}
+
+// Update the Dir button UI to reflect current knownProjectDir
+function updateDirButtonUI() {
+  const btn = document.getElementById('btn-project-dir');
+  const ptabBtn = document.getElementById('ptab-btn-dir');
+  const runBtn = document.getElementById('btn-run');
+  if (!btn) return;
+  if (knownProjectDir) {
+    const short = knownProjectDir.split(/[/\\]/).pop();
+    btn.textContent = '📂 ' + short;
+    btn.classList.add('dir-set');
+    btn.title = 'Project dir: ' + knownProjectDir + '\nClick to change';
+    if (ptabBtn) { ptabBtn.textContent = '📂 ' + short; ptabBtn.classList.add('dir-set'); }
+    if (runBtn) runBtn.title = 'Run in window (file://' + knownProjectDir + ')';
+  } else {
+    btn.textContent = '📂 Dir';
+    btn.classList.remove('dir-set');
+    btn.title = 'Set project directory for native file:// loading';
+    if (ptabBtn) { ptabBtn.textContent = '📂 dir'; ptabBtn.classList.remove('dir-set'); }
+    if (runBtn) runBtn.title = 'Run (Ctrl+Enter) — set project dir to open in native window';
+  }
+}
+
+// Show the Set Project Dir dialog (manual trigger from menu/button)
+function promptSetProjectDir() {
+  askProjectDir(knownProjectDir || '', (dir) => {
+    updateDirButtonUI();
+  });
+}
+
+
+// pathBasename: extract filename from any path or URL
+function pathBasename(src) {
+  return src.replace(/[?#].*$/, '').split('/').filter(Boolean).pop() || '';
+}
+
+// Resolve a file:// or relative src against sharedFileMap by trying:
+// 1. Exact vPath match (stripped)
+// 2. Tail/filename match across all shared entries
+// Returns { entry, isBinary } or null
+function sharedMapLookup(src) {
+  if (!sharedFileMap || sharedFileMap.size === 0) return null;
+  // Normalize: strip file:// prefix or leading slashes
+  const stripped = src.replace(/^file:\/\//, '').replace(/^\/+/, '');
+  // 1. Exact
+  if (sharedFileMap.has(stripped)) return sharedFileMap.get(stripped);
+  // 2. Tail match — longest suffix match wins
+  const parts = stripped.split('/');
+  for (let i = 0; i < parts.length; i++) {
+    const tail = parts.slice(i).join('/');
+    for (const [vp, entry] of sharedFileMap) {
+      if (vp === tail || vp.endsWith('/' + tail)) return entry;
+    }
+  }
+  // 3. Basename only
+  const base = parts[parts.length - 1];
+  for (const [vp, entry] of sharedFileMap) {
+    if (vp === base || vp.endsWith('/' + base)) return entry;
+  }
+  return null;
+}
+
+
+async function runJS(jsPath) {
+  switchPanelTab('terminal');
+  termLog('sys', `Executing: ${jsPath}`);
+  const code = await fsReadFile(jsPath);
+  const iframe = document.getElementById('preview-frame');
+  iframe.srcdoc = `<!DOCTYPE html><html><body><script>
+(function(){
+  var _={log:console.log,warn:console.warn,error:console.error,info:console.info};
+  function p(l,a){try{parent.postMessage({__void:true,level:l,msg:a.map(function(x){
+    try{return typeof x==='object'?JSON.stringify(x,null,2):String(x);}catch(e){return String(x);}
+  }).join(' ')},'*');}catch(e){}}
+  console.log  =function(){_.log.apply(console,arguments);  p('log',  [].slice.call(arguments));};
+  console.warn  =function(){_.warn.apply(console,arguments); p('warn', [].slice.call(arguments));};
+  console.error =function(){_.error.apply(console,arguments);p('error',[].slice.call(arguments));};
+  console.info  =function(){_.info.apply(console,arguments); p('info', [].slice.call(arguments));};
+  window.onerror=function(m,s,l){p('error',['Uncaught: '+m+' (line '+l+')']);};
+  try {
+${code}
+  } catch(e) { console.error('Runtime error: '+e.message); }
+})();
+\x3c/script></body></html>`;
+}
+
+// Receive console messages from iframe
+window.addEventListener('message', e => {
+  const d = e.data;
+  if (!d||!d.__void) return;
+  const l = d.level||'log';
+  termLog(l, d.msg);
+});
+
+// ═══════════════════════════════════════════════════════════════════
+//  TERMINAL OUTPUT
+// ═══════════════════════════════════════════════════════════════════
+function ts() { return new Date().toLocaleTimeString('en-US',{hour12:false}); }
+
+function termLog(level, msg) {
+  const out = document.getElementById('terminal-output');
+  const el  = document.createElement('div');
+  el.className = 'term-line';
+  const msgCls = (level==='error'?'error':level==='warn'?'warn':'');
+  el.innerHTML =
+    `<span class="term-ts">${ts()}</span>` +
+    `<span class="term-tag ${level}">${level.toUpperCase()}</span>` +
+    `<span class="term-msg ${msgCls}">${escH(String(msg))}</span>`;
+  out.appendChild(el);
+  out.scrollTop = out.scrollHeight;
+}
+
+function escH(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function clearTerminal() { document.getElementById('terminal-output').innerHTML=''; }
+
+// ═══════════════════════════════════════════════════════════════════
+//  PANEL TABS + RESIZE
+// ═══════════════════════════════════════════════════════════════════
+function switchPanelTab(name) {
+  document.querySelectorAll('.panel-view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.ptab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
+  document.getElementById('ptab-'+name).classList.add('active');
+}
+
+function togglePanel() {
+  const pa = document.getElementById('panel-area');
+  const pr = document.getElementById('panel-resize');
+  const hidden = pa.style.display==='none';
+  pa.style.display  = hidden ? '' : 'none';
+  pr.style.display  = hidden ? '' : 'none';
+}
+
+// Panel resize drag
+(function(){
+  const handle = document.getElementById('panel-resize');
+  const panel  = document.getElementById('panel-area');
+  let dragging = false, startY, startH;
+  handle.addEventListener('mousedown', e => {
+    dragging=true; startY=e.clientY; startH=panel.offsetHeight;
+    handle.classList.add('dragging');
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const delta = startY - e.clientY;
+    const newH  = Math.min(Math.max(startH+delta, 80), window.innerHeight*0.75);
+    panel.style.height = newH+'px';
+  });
+  document.addEventListener('mouseup', ()=>{ dragging=false; handle.classList.remove('dragging'); });
+})();
+
+// Sidebar resize drag
+(function(){
+  const handle  = document.getElementById('sidebar-resize');
+  const sidebar = document.getElementById('sidebar');
+  let dragging=false, startX, startW;
+  handle.addEventListener('mousedown', e => {
+    dragging=true; startX=e.clientX; startW=sidebar.offsetWidth;
+    handle.classList.add('dragging'); e.preventDefault();
+  });
+  document.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const newW = Math.min(Math.max(startW+(e.clientX-startX), 120), 500);
+    sidebar.style.width = newW+'px';
+    document.documentElement.style.setProperty('--sidebar-w', newW+'px');
+  });
+  document.addEventListener('mouseup', ()=>{ dragging=false; handle.classList.remove('dragging'); });
+})();
+
+function toggleSidebar() {
+  const sb = document.getElementById('sidebar');
+  const sr = document.getElementById('sidebar-resize');
+  const ab = document.getElementById('activitybar');
+  const hidden = sb.style.display==='none';
+  sb.style.display = hidden?'':'none';
+  sr.style.display = hidden?'':'none';
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  CONTEXT MENU
+// ═══════════════════════════════════════════════════════════════════
+function showCtxMenu(x, y, path, isDir) {
+  ctxTarget = { path, isDir };
+  const menu = document.getElementById('ctx-menu');
+  menu.style.left = Math.min(x, window.innerWidth-180)+'px';
+  menu.style.top  = Math.min(y, window.innerHeight-200)+'px';
+  menu.classList.add('visible');
+  document.getElementById('ctx-open').style.display    = isDir?'none':'flex';
+  document.getElementById('ctx-newfile').style.display  = isDir?'flex':'flex';
+  document.getElementById('ctx-newfolder').style.display= isDir?'flex':'flex';
+}
+
+document.addEventListener('click', ()=>document.getElementById('ctx-menu').classList.remove('visible'));
+
+document.getElementById('ctx-open').addEventListener('click', ()=>{
+  if (ctxTarget && !ctxTarget.isDir) openFile(ctxTarget.path);
+});
+document.getElementById('ctx-rename').addEventListener('click', async ()=>{
+  if (!ctxTarget) return;
+  const curName = ctxTarget.path.split('/').pop();
+  const dir = ctxTarget.path.split('/').slice(0,-1).join('/') || '/';
+  showDialog('Rename', curName, 'Rename', async newName => {
+    if (!newName || newName === curName) return;
+    const newPath = joinPath(dir, newName);
+    try {
+      await fsRename(ctxTarget.path, newPath);
+      // Update open tabs
+      const tab = openTabs.find(t=>t.path===ctxTarget.path);
+      if (tab) { tab.path = newPath; if (activeTab===ctxTarget.path) activeTab=newPath; }
+      renderTabs(); refreshTree();
+    } catch(e) { termLog('error','Rename failed: '+e.message); }
+  });
+});
+document.getElementById('ctx-delete').addEventListener('click', async ()=>{
+  if (!ctxTarget) return;
+  showConfirm('Delete ' + ctxTarget.path + '?', '', async () => {
+    try {
+      if (ctxTarget.isDir) await fsRmdirR(ctxTarget.path);
+      else { await fsUnlink(ctxTarget.path); closeTab(ctxTarget.path); }
+      refreshTree();
+      termLog('sys', `Deleted: ${ctxTarget.path}`);
+    } catch(e) { termLog('error','Delete failed: '+e.message); }
+  });
+});
+document.getElementById('ctx-newfile').addEventListener('click', ()=>{
+  if (!ctxTarget) return;
+  const dir = ctxTarget.isDir ? ctxTarget.path : ctxTarget.path.split('/').slice(0,-1).join('/')||'/';
+  showNewFileDialog(dir);
+});
+document.getElementById('ctx-newfolder').addEventListener('click', ()=>{
+  if (!ctxTarget) return;
+  const dir = ctxTarget.isDir ? ctxTarget.path : ctxTarget.path.split('/').slice(0,-1).join('/')||'/';
+  showNewFolderDialog(dir);
+});
+
+// ═══════════════════════════════════════════════════════════════════
+//  DIALOGS
+// ═══════════════════════════════════════════════════════════════════
+let dialogCallback = null;
+
+function showDialog(title, placeholder, okLabel, cb) {
+  document.getElementById('dialog-title').textContent = title;
+  document.getElementById('dialog-input').value = '';
+  document.getElementById('dialog-input').placeholder = placeholder;
+  document.getElementById('dialog-ok').textContent = okLabel;
+  document.getElementById('dialog-overlay').classList.add('visible');
+  document.getElementById('dialog-input').focus();
+  dialogCallback = cb;
+}
+
+function closeDialog() {
+  document.getElementById('dialog-overlay').classList.remove('visible');
+  dialogCallback = null;
+  _restoreDialog();
+}
+
+// ── Confirm dialog (replaces window.confirm) ──────────────────────
+let _confirmOk = null, _confirmCancel = null;
+
+function showConfirm(title, subtitle, onOk, onCancel) {
+  _confirmOk = onOk || null;
+  _confirmCancel = onCancel || null;
+  document.getElementById('dialog-title').textContent = title;
+
+  const inp = document.getElementById('dialog-input');
+  inp.style.display = 'none';
+
+  let subtitleEl = document.getElementById('dialog-subtitle');
+  if (!subtitleEl) {
+    subtitleEl = document.createElement('p');
+    subtitleEl.id = 'dialog-subtitle';
+    subtitleEl.style.cssText = 'font-size:11px;color:var(--text-dim);margin-bottom:12px;';
+    document.getElementById('dialog').insertBefore(subtitleEl, document.querySelector('.dialog-btns'));
+  }
+  subtitleEl.textContent = subtitle || '';
+  subtitleEl.style.display = subtitle ? '' : 'none';
+
+  document.getElementById('dialog-ok').textContent = 'OK';
+  document.getElementById('dialog-overlay').classList.add('visible');
+  inp.focus();
+}
+
+// ── Folder access modal (for ensureSharedMapForFileUrls) ──────────
+function _restoreDialog() {
+  _confirmOk = null; _confirmCancel = null;
+  document.getElementById('dialog-input').style.display = '';
+  document.getElementById('dialog-ok').textContent = 'Create';
+  const sub = document.getElementById('dialog-subtitle');
+  if (sub) sub.style.display = 'none';
+}
+
+document.getElementById('dialog-ok').addEventListener('click', async ()=>{
+  // Confirm/modal mode
+  if (_confirmOk) {
+    const fn = _confirmOk;
+    document.getElementById('dialog-overlay').classList.remove('visible');
+    _restoreDialog();
+    await fn();
+    return;
+  }
+  // Normal dialog mode
+  if (!dialogCallback) return;
+  const val = document.getElementById('dialog-input').value.trim();
+  if (!val) { closeDialog(); return; }
+  await dialogCallback(val);
+  closeDialog();
+});
+
+document.getElementById('dialog-input').addEventListener('keydown', e=>{
+  if (e.key==='Enter') document.getElementById('dialog-ok').click();
+  if (e.key==='Escape') closeDialog();
+});
+
+document.getElementById('dialog-overlay').addEventListener('click', e=>{
+  if (e.target===document.getElementById('dialog-overlay')) {
+    const fn = _confirmCancel;
+    closeDialog();
+    if (fn) fn();
+  }
+});
+
+function showNewFileDialog(dir='/') {
+  showDialog('New File', 'filename.js', 'Create', async name=>{
+    const path = joinPath(dir, name);
+    try {
+      await fsWriteFileSafe(path, '');
+      termLog('sys', 'Created: '+path);
+      await refreshTree();
+      await openFile(path);
+    } catch(e) { termLog('error','Create failed: '+e.message); }
+  });
+}
+
+function showNewFolderDialog(dir='/') {
+  showDialog('New Folder', 'folder-name', 'Create', async name=>{
+    const path = joinPath(dir, name);
+    try {
+      await fsMkdirP(path);
+      treeExpanded.add(path);
+      termLog('sys', 'Created folder: '+path);
+      await refreshTree();
+    } catch(e) { termLog('error','Create failed: '+e.message); }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  ACTIVITY BAR
+// ═══════════════════════════════════════════════════════════════════
+function setActivity(name) {
+  document.querySelectorAll('.act-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('act-'+name).classList.add('active');
+  document.getElementById('sidebar-explorer').style.display = name==='files'  ? '' : 'none';
+  document.getElementById('sidebar-search').style.display   = name==='search' ? '' : 'none';
+  document.getElementById('sidebar-shared').style.display   = name==='shared' ? '' : 'none';
+  if (name==='shared') sharedRender();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  SEARCH
+// ═══════════════════════════════════════════════════════════════════
+async function doSearch(query) {
+  const out = document.getElementById('search-results');
+  if (!query.trim()) { out.innerHTML=''; return; }
+  out.innerHTML = '<span style="color:var(--text-faint)">Searching…</span>';
+  const results = [];
+  await searchDir('/', query.toLowerCase(), results);
+  if (!results.length) { out.innerHTML='<span style="color:var(--text-faint)">No results</span>'; return; }
+  out.innerHTML = results.slice(0,50).map(r=>`
+    <div style="padding:4px 0;cursor:pointer;border-bottom:1px solid var(--border)"
+         onclick="openFile('${r.path}')">
+      <div style="color:var(--text);font-size:11px">${r.path.split('/').pop()}</div>
+      <div style="color:var(--text-faint);font-size:10px">${escH(r.line)}</div>
+    </div>`).join('');
+}
+
+async function searchDir(dir, query, results) {
+  const items = await fsReaddir(dir).catch(()=>[]);
+  for (const item of items) {
+    const path = joinPath(dir, item);
+    const stat = await fsStat(path).catch(()=>null);
+    if (!stat) continue;
+    if (stat.isDirectory()) { await searchDir(path, query, results); continue; }
+    try {
+      const content = await fsReadFile(path);
+      const lines   = content.split('\n');
+      for (const line of lines) {
+        if (line.toLowerCase().includes(query)) {
+          results.push({ path, line: line.trim().slice(0,60) });
+          break;
+        }
+      }
+    } catch {}
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  IMPORT / EXPORT
+// ═══════════════════════════════════════════════════════════════════
+function importFile() {
+  const inp = document.createElement('input');
+  inp.type='file'; inp.accept='*/*';
+  inp.onchange = async () => {
+    const file = inp.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async e => {
+      const path = '/'+file.name;
+      await fsWriteFileSafe(path, e.target.result);
+      termLog('sys', `Imported: ${path}`);
+      refreshTree(); openFile(path);
+    };
+    reader.readAsText(file);
+  };
+  inp.click();
+}
+
+function exportFile() {
+  if (!activeTab) return;
+  const tab = openTabs.find(t=>t.path===activeTab);
+  if (!tab) return;
+  const content = tab.model.getValue();
+  const blob = new Blob([content], {type:'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = activeTab.split('/').pop();
+  a.click();
+  termLog('sys', `Exported: ${activeTab}`);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  RESET FS
+// ═══════════════════════════════════════════════════════════════════
+async function resetFS() {
+  showConfirm('Reset filesystem?', 'All files will be lost.', async () => {
+    // Close all tabs
+    openTabs.forEach(t=>t.model.dispose());
+    openTabs=[]; activeTab=null;
+    monacoEditor.setModel(null);
+    document.getElementById('empty-state').style.display='flex';
+    renderTabs();
+    // Delete everything under /
+    const topItems = await fsReaddir('/').catch(()=>[]);
+    for (const item of topItems) {
+      if (item.startsWith('.')) continue;
+      const p = '/' + item;
+      const s = await fsStat(p).catch(()=>null);
+      if (!s) continue;
+      if (s.isDirectory()) await fsRmdirR(p);
+      else await fsUnlink(p).catch(()=>{});
+    }
+    // Re-seed with defaults
+    for (const [path, content] of Object.entries(DEFAULT_FILES)) {
+      await fsWriteFileSafe(path, content);
+    }
+    termLog('sys','Filesystem reset. Default files restored.');
+    await refreshTree();
+    if (await fsExists('/index.html')) await openFile('/index.html');
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  KEYBOARD SHORTCUTS
+// ═══════════════════════════════════════════════════════════════════
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey || e.metaKey) {
+    if (e.shiftKey && e.key==='Enter') { e.preventDefault(); runProjectIndex(); return; }
+    if (e.shiftKey && e.key==='S')     { e.preventDefault(); saveAll(); return; }
+    if (e.shiftKey && e.key==='O')     { e.preventDefault(); importZip(); return; }
+    if (e.shiftKey && e.key==='E')     { e.preventDefault(); exportZip(); return; }
+    if (e.key==='Enter') { e.preventDefault(); runCurrentFile(); return; }
+    if (e.key==='s')     { e.preventDefault(); saveCurrentFile(); return; }
+    if (e.key==='n')     { e.preventDefault(); showNewFileDialog(); return; }
+    if (e.key==='b')     { e.preventDefault(); toggleSidebar(); return; }
+    if (e.key==='`')     { e.preventDefault(); togglePanel(); return; }
+    if (e.key==='w')     { e.preventDefault(); if (activeTab) closeTab(activeTab); return; }
+  }
+});
+
+// Close menus on Escape
+document.addEventListener('keydown', e => {
+  if (e.key==='Escape') {
+    document.getElementById('ctx-menu').classList.remove('visible');
+    document.querySelectorAll('.menu-item').forEach(m=>m.classList.remove('open'));
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════
+//  INLINE RENAME (dblclick)
+// ═══════════════════════════════════════════════════════════════════
+function startRename(el, path) {
+  const nameEl = el.querySelector('.tree-name');
+  const old    = nameEl.textContent;
+  nameEl.contentEditable = 'true';
+  nameEl.classList.add('editing');
+  nameEl.focus();
+  const range = document.createRange(); range.selectNodeContents(nameEl);
+  window.getSelection().removeAllRanges(); window.getSelection().addRange(range);
+
+  async function commit() {
+    const newName = nameEl.textContent.trim();
+    nameEl.contentEditable='false'; nameEl.classList.remove('editing');
+    if (!newName || newName===old) { nameEl.textContent=old; return; }
+    const dir = path.split('/').slice(0,-1).join('/')||'/';
+    const newPath = joinPath(dir, newName);
+    try {
+      await fsRename(path, newPath);
+      const tab = openTabs.find(t=>t.path===path);
+      if (tab) { tab.path=newPath; if(activeTab===path) activeTab=newPath; updateStatusBar(newPath); }
+      renderTabs(); refreshTree();
+    } catch(e) { termLog('error','Rename failed: '+e.message); nameEl.textContent=old; refreshTree(); }
+  }
+
+  nameEl.addEventListener('blur', commit, {once:true});
+  nameEl.addEventListener('keydown', e=>{
+    if (e.key==='Enter') { e.preventDefault(); nameEl.blur(); }
+    if (e.key==='Escape'){ nameEl.textContent=old; nameEl.blur(); }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  MENU CLICK OUTSIDE
+// ═══════════════════════════════════════════════════════════════════
+document.addEventListener('click', e=>{
+  if (!e.target.closest('.menu-item')) {
+    document.querySelectorAll('.menu-item').forEach(m=>m.classList.remove('open'));
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════════
+//  ZIP IMPORT / EXPORT
+// ═══════════════════════════════════════════════════════════════════
+
+function zipFmtBytes(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+  return (b / 1048576).toFixed(1) + ' MB';
+}
+
+function zipGetMime(ext) {
+  var map = { png:'image/png', jpg:'image/jpeg', jpeg:'image/jpeg', gif:'image/gif',
+    webp:'image/webp', bmp:'image/bmp', ico:'image/x-icon', svg:'image/svg+xml',
+    woff:'font/woff', woff2:'font/woff2', ttf:'font/ttf', eot:'application/vnd.ms-fontobject',
+    mp3:'audio/mpeg', mp4:'video/mp4', wav:'audio/wav', ogg:'audio/ogg', pdf:'application/pdf' };
+  return map[ext] || 'application/octet-stream';
+}
+
+// progress modal
+function zipModalShow(filename) {
+  document.getElementById('zip-modal-filename').textContent = filename;
+  document.getElementById('zip-progress-bar').style.width = '0%';
+  document.getElementById('zip-progress-label').textContent = 'Reading archive…';
+  document.getElementById('zip-file-list').innerHTML = '';
+  document.getElementById('zip-modal-overlay').classList.add('visible');
+}
+function zipModalProgress(pct, label) {
+  document.getElementById('zip-progress-bar').style.width = pct + '%';
+  document.getElementById('zip-progress-label').textContent = label;
+}
+function zipModalAddFile(path, status, size) {
+  var el  = document.createElement('div');
+  el.className = 'zfl-item';
+  var cls = status === 'ok' ? 'zfl-ok' : status === 'skip' ? 'zfl-skip' : 'zfl-err';
+  var chr = status === 'ok' ? '✓'  : status === 'skip' ? '—'   : '✗';
+  el.innerHTML = '<span class="' + cls + '">' + chr + '</span>'
+    + '<span class="zfl-path">' + escH(path) + '</span>'
+    + (size != null ? '<span class="zfl-size">' + zipFmtBytes(size) + '</span>' : '');
+  var list = document.getElementById('zip-file-list');
+  list.appendChild(el);
+  list.scrollTop = list.scrollHeight;
+}
+function zipModalHide() {
+  document.getElementById('zip-modal-overlay').classList.remove('visible');
+}
+
+// core handleZipFile
+async function handleZipFile(file, opts) {
+  opts = opts || {};
+  var targetDir  = opts.targetDir  || '/';
+  var clearFirst = opts.clearFirst || false;
+
+  if (!file || !file.name.toLowerCase().endsWith('.zip')) {
+    termLog('error', 'Not a ZIP file: ' + (file ? file.name : '?'));
+    return;
+  }
+  zipModalShow(file.name);
+  try {
+    // read as arraybuffer
+    var buf = await new Promise(function(res, rej) {
+      var r = new FileReader();
+      r.onload  = function(e) { res(e.target.result); };
+      r.onerror = rej;
+      r.readAsArrayBuffer(file);
+    });
+    zipModalProgress(10, 'Parsing ZIP…');
+    var zip = await JSZip.loadAsync(buf);
+
+    // collect entries
+    var entries = [];
+    zip.forEach(function(relPath, entry) { if (!entry.dir) entries.push({ relPath: relPath, entry: entry }); });
+    termLog('sys', 'ZIP: "' + file.name + '" — ' + entries.length + ' file(s)');
+
+    // optionally wipe FS first
+    if (clearFirst) {
+      zipModalProgress(15, 'Clearing filesystem…');
+      var top = await fsReaddir('/').catch(function(){ return []; });
+      for (var j = 0; j < top.length; j++) {
+        if (top[j].charAt(0) === '.') continue;
+        var tp = '/' + top[j];
+        var ts = await fsStat(tp).catch(function(){ return null; });
+        if (!ts) continue;
+        if (ts.isDirectory()) await fsRmdirR(tp); else await fsUnlink(tp).catch(function(){});
+      }
+      openTabs.forEach(function(t){ t.model.dispose(); });
+      openTabs = []; activeTab = null;
+      monacoEditor.setModel(null);
+      document.getElementById('empty-state').style.display = 'flex';
+      renderTabs();
+    }
+
+    // detect & strip common root prefix
+    var prefix = '';
+    if (entries.length > 1) {
+      var fp = entries[0].relPath.replace(/\\/g, '/');
+      var si = fp.indexOf('/');
+      if (si > 0) {
+        var cand = fp.slice(0, si + 1);
+        if (entries.every(function(e) { return e.relPath.replace(/\\/g,'/').startsWith(cand); }))
+          prefix = cand;
+      }
+    }
+
+    var BINARY = { png:1, jpg:1, jpeg:1, gif:1, webp:1, bmp:1, ico:1,
+                   woff:1, woff2:1, ttf:1, eot:1, mp3:1, mp4:1, wav:1,
+                   ogg:1, pdf:1, zip:1, gz:1 };
+    var done = 0;
+    for (var i = 0; i < entries.length; i++) {
+      var rel  = entries[i].relPath.replace(/\\/g, '/').replace(/^\/+/, '');
+      var ze   = entries[i].entry;
+      if (prefix && rel.startsWith(prefix)) rel = rel.slice(prefix.length);
+      if (!rel) continue;
+      var dest = joinPath(targetDir, rel);
+      var ext  = rel.split('.').pop().toLowerCase();
+      try {
+        var txt;
+        if (BINARY[ext]) {
+          var b64 = await ze.async('base64');
+          txt = 'data:' + zipGetMime(ext) + ';base64,' + b64;
+          zipModalAddFile(dest, 'ok', Math.round(b64.length * 0.75));
+        } else {
+          txt = await ze.async('string');
+          zipModalAddFile(dest, 'ok', txt.length);
+        }
+        await fsWriteFileSafe(dest, txt);
+        done++;
+      } catch(e) {
+        termLog('error', 'ZIP: failed ' + dest + ': ' + e.message);
+        zipModalAddFile(dest, 'err', null);
+      }
+      zipModalProgress(20 + Math.round((done / entries.length) * 75),
+        'Writing files… (' + done + '/' + entries.length + ')');
+    }
+
+    zipModalProgress(100, 'Done — ' + done + ' file(s) imported');
+    termLog('sys', 'ZIP import complete: ' + done + '/' + entries.length + ' files');
+    await refreshTree();
+
+    // auto-open index.html or first file
+    var opens = [ joinPath(targetDir, 'index.html') ];
+    if (entries.length) opens.push(joinPath(targetDir, entries[0].relPath.replace(/\\/g,'/').replace(/^\/+/,'')));
+    for (var k = 0; k < opens.length; k++) {
+      if (opens[k] === '/') continue;
+      if (await fsExists(opens[k])) {
+        var st = await fsStat(opens[k]).catch(function(){ return null; });
+        if (st && !st.isDirectory()) { await openFile(opens[k]); break; }
+      }
+    }
+    setTimeout(zipModalHide, 1800);
+
+  } catch(e) {
+    zipModalHide();
+    termLog('error', 'ZIP import failed: ' + e.message);
+    console.error(e);
+  }
+}
+
+// importZip — file picker
+function importZip(targetDir) {
+  targetDir = targetDir || '/';
+  var inp = document.createElement('input');
+  inp.type   = 'file';
+  inp.accept = '.zip,application/zip,application/x-zip-compressed';
+  inp.onchange = async function() {
+    var file = inp.files[0]; if (!file) return;
+    await handleZipFile(file, { clearFirst: false, targetDir: targetDir });
+  };
+  inp.click();
+}
+
+// exportZip — pack FS into downloadable zip
+async function exportZip() {
+  termLog('sys', 'Building ZIP archive…');
+  var zip = new JSZip();
+
+  async function addDir(dir, folder) {
+    var items = await fsReaddir(dir).catch(function(){ return []; });
+    for (var i = 0; i < items.length; i++) {
+      if (items[i].charAt(0) === '.') continue;
+      var p    = joinPath(dir, items[i]);
+      var stat = await fsStat(p).catch(function(){ return null; });
+      if (!stat) continue;
+      if (stat.isDirectory()) {
+        await addDir(p, folder.folder(items[i]));
+      } else {
+        try {
+          var c = await fsReadFile(p);
+          if (c.startsWith('data:') && c.indexOf(';base64,') !== -1) {
+            folder.file(items[i], c.split(';base64,')[1], { base64: true });
+          } else {
+            folder.file(items[i], c);
+          }
+        } catch(e) { termLog('warn', 'ZIP export: skipped ' + p + ' (' + e.message + ')'); }
+      }
+    }
+  }
+  await addDir('/', zip);
+
+  var blob = await zip.generateAsync(
+    { type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } },
+    function(m) { termLog('sys', 'Compressing… ' + m.percent.toFixed(0) + '%'); }
+  );
+  var name = 'void-project-' + new Date().toISOString().slice(0,10) + '.zip';
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  termLog('sys', 'ZIP exported: ' + name + ' (' + (blob.size/1024).toFixed(1) + ' KB)');
+}
+
+// drag-and-drop ZIP onto window
+(function() {
+  var overlay   = document.getElementById('zip-drop-overlay');
+  var dragDepth = 0;
+  function looksLikeZip(e) {
+    return Array.from((e.dataTransfer || {items:[]}).items || []).some(function(i) {
+      return i.kind === 'file' && (i.type.indexOf('zip') !== -1 || i.type === '');
+    });
+  }
+  document.addEventListener('dragenter', function(e) {
+    e.preventDefault(); dragDepth++;
+    if (dragDepth === 1) {
+      overlay.classList.remove('reject');
+      overlay.classList.add('active');
+      if (!looksLikeZip(e)) overlay.classList.add('reject');
+    }
+  });
+  document.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+  });
+  document.addEventListener('dragleave', function(e) {
+    dragDepth--;
+    if (dragDepth <= 0) { dragDepth = 0; overlay.classList.remove('active', 'reject'); }
+  });
+  document.addEventListener('drop', async function(e) {
+    e.preventDefault(); dragDepth = 0;
+    overlay.classList.remove('active', 'reject');
+    var files = Array.from(e.dataTransfer.files);
+    var zips  = files.filter(function(f) { return f.name.toLowerCase().endsWith('.zip'); });
+    if (!zips.length) {
+      termLog('warn', 'Dropped file is not a ZIP. Use File > Import File for individual files.');
+      return;
+    }
+    for (var i = 0; i < zips.length; i++) { await handleZipFile(zips[i], { clearFirst: false }); }
+  });
+})();
+
+// ═══════════════════════════════════════════════════════════════════
+//  MIME TYPE MAP (full coverage)
+// ═══════════════════════════════════════════════════════════════════
+const MIME_MAP = {
+  // Text
+  html:'text/html', htm:'text/html', xhtml:'application/xhtml+xml',
+  css:'text/css', js:'text/javascript', mjs:'text/javascript',
+  ts:'text/typescript', jsx:'text/javascript', tsx:'text/javascript',
+  json:'application/json', jsonld:'application/ld+json',
+  xml:'application/xml', svg:'image/svg+xml',
+  txt:'text/plain', md:'text/markdown', markdown:'text/markdown',
+  csv:'text/csv', tsv:'text/tab-separated-values',
+  yaml:'text/yaml', yml:'text/yaml', toml:'text/plain',
+  ini:'text/plain', conf:'text/plain', sh:'text/x-shellscript',
+  py:'text/x-python', rb:'text/x-ruby', php:'text/x-php',
+  java:'text/x-java', c:'text/x-c', cpp:'text/x-c++', h:'text/x-c',
+  rs:'text/x-rust', go:'text/x-go', swift:'text/x-swift',
+  kt:'text/x-kotlin', dart:'text/x-dart', r:'text/x-r',
+  sql:'text/x-sql', graphql:'application/graphql',
+  wasm:'application/wasm',
+  // Images
+  png:'image/png', jpg:'image/jpeg', jpeg:'image/jpeg',
+  gif:'image/gif', webp:'image/webp', avif:'image/avif',
+  bmp:'image/bmp', ico:'image/x-icon', tiff:'image/tiff',
+  // Fonts
+  woff:'font/woff', woff2:'font/woff2', ttf:'font/ttf',
+  otf:'font/otf', eot:'application/vnd.ms-fontobject',
+  // Audio / Video
+  mp3:'audio/mpeg', wav:'audio/wav', ogg:'audio/ogg',
+  flac:'audio/flac', aac:'audio/aac', opus:'audio/opus',
+  mp4:'video/mp4', webm:'video/webm', ogv:'video/ogg',
+  avi:'video/x-msvideo', mov:'video/quicktime',
+  // Documents / archives
+  pdf:'application/pdf', zip:'application/zip',
+  gz:'application/gzip', tar:'application/x-tar',
+  // Data
+  wasm:'application/wasm',
+};
+function getMime(ext) {
+  return MIME_MAP[ext.toLowerCase()] || 'application/octet-stream';
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  VIRTUAL FETCH SERVER
+//  Injects a postMessage-based fetch() shim into the preview iframe
+//  so user code can fetch('/any/vfs/file') and get real responses
+//  with correct MIME types and binary support.
+// ═══════════════════════════════════════════════════════════════════
+// Build the fetch+XHR bridge as a plain string (NOT a template literal)
+// so no ${} expressions or backticks can be accidentally interpolated when injected into srcdoc.
+function buildFetchBridge() {
+  return '(function(){'
+    + 'var pf={},fi=0;'
+    + 'window.addEventListener("message",function(e){'
+    +   'var d=e.data;'
+    +   'if(!d||d.__type!=="__voidFetchResp")return;'
+    +   'var cb=pf[d.id];if(!cb)return;'
+    +   'delete pf[d.id];'
+    +   'if(d.error){cb.rej(new TypeError(d.error));return;}'
+    +   'var body=d.base64?Uint8Array.from(atob(d.body),function(c){return c.charCodeAt(0);}).buffer:d.body;'
+    +   'var resp=new Response(body,{status:d.status,headers:{"Content-Type":d.mime}});'
+    +   'try{Object.defineProperty(resp,"url",{value:d.url});}catch(e){}'
+    +   'cb.res(resp);'
+    + '});'
+    + 'var _f=window.fetch;'
+    + 'window.fetch=function(url,opts){'
+    +   'var us=typeof url==="string"?url:(url&&url.url?url.url:String(url));'
+    +   'if(/^(https?|data|blob):/.test(us))return _f.apply(window,arguments);'
+    +   'return new Promise(function(res,rej){'
+    +     'var id=++fi;pf[id]={res:res,rej:rej};'
+    +     'try{parent.postMessage({__type:"__voidFetchReq",id:id,url:us},"*");}catch(e){rej(new TypeError(e.message));}'
+    +   '});'
+    + '};'
+    + 'var _X=XMLHttpRequest;'
+    + 'window.XMLHttpRequest=function(){'
+    +   'var xhr=new _X();'
+    +   'var _o=xhr.open.bind(xhr),_s=xhr.send.bind(xhr),_vi;'
+    +   'xhr.open=function(m,url,a){'
+    +     'var us=String(url);'
+    +     'if(/^(https?|data|blob):/.test(us)){_vi=null;return _o(m,url,a!==false);}' 
+    +     '_vi=us;'
+    +   '};'
+    +   'xhr.send=function(b){'
+    +     'if(!_vi)return _s(b);'
+    +     'var u=_vi;_vi=null;'
+    +     'window.fetch(u).then(function(r){'
+    +       'return r.text().then(function(t){'
+    +         'Object.defineProperty(xhr,"readyState",{get:function(){return 4;},configurable:true});'
+    +         'Object.defineProperty(xhr,"status",{get:function(){return r.status;},configurable:true});'
+    +         'Object.defineProperty(xhr,"responseText",{get:function(){return t;},configurable:true});'
+    +         'Object.defineProperty(xhr,"response",{get:function(){return t;},configurable:true});'
+    +         'if(typeof xhr.onreadystatechange==="function")xhr.onreadystatechange();'
+    +         'if(typeof xhr.onload==="function")xhr.onload({target:xhr});'
+    +       '});'
+    +     '}).catch(function(e){'
+    +       'Object.defineProperty(xhr,"readyState",{get:function(){return 4;},configurable:true});'
+    +       'Object.defineProperty(xhr,"status",{get:function(){return 0;},configurable:true});'
+    +       'if(typeof xhr.onerror==="function")xhr.onerror(e);'
+    +     '});'
+    +   '};'
+    +   'return xhr;'
+    + '};'
+    + '})();';
+}
+
+// Handle fetch requests from the preview iframe
+window.addEventListener('message', async function(e) {
+  const d = e.data;
+  if (!d || d.__type !== '__voidFetchReq') return;
+  const { id, url } = d;
+  const frame = document.getElementById('preview-frame');
+  if (!frame.contentWindow || e.source !== frame.contentWindow) return;
+
+  try {
+    let path = url.split('?')[0].split('#')[0];
+    if (!path.startsWith('/')) path = '/' + path;
+    const ext = path.split('.').pop().toLowerCase();
+    const mime = getMime(ext);
+    const isBinary = /^(image|audio|video|font)\//.test(mime)
+      || mime === 'application/pdf' || mime === 'application/zip' || mime === 'application/wasm';
+
+    // 1. Check shared file map — strip leading slash, try tail matching
+    let body = null, base64 = false, size = 0;
+    const stripped = path.replace(/^\/+/, '');
+
+    if (sharedFileMap && sharedFileMap.size > 0) {
+      let entry = sharedFileMap.get(stripped);
+      if (!entry) {
+        // Try tail match for relative-path fetches
+        for (const [vp, ent] of sharedFileMap) {
+          if (vp.endsWith('/' + stripped) || vp === stripped) { entry = ent; break; }
+        }
+      }
+      if (entry) {
+        try {
+          const file = await entry.handle.getFile();
+          if (isBinary) {
+            const buf = await file.arrayBuffer();
+            const bytes = new Uint8Array(buf);
+            let b64 = '';
+            const chunk = 8192;
+            for (let i = 0; i < bytes.length; i += chunk)
+              b64 += String.fromCharCode.apply(null, bytes.subarray(i, Math.min(i+chunk, bytes.length)));
+            body = btoa(b64); base64 = true; size = file.size;
+          } else {
+            body = await file.text(); size = body.length;
+          }
+        } catch(e2) { body = null; }
+      }
+    }
+
+    // 2. Fall back to VFS
+    if (body === null) {
+      const vfsPaths = [path, '/' + stripped];
+      for (const vp of vfsPaths) {
+        if (!await fsExists(vp)) continue;
+        const content = await fsReadFile(vp);
+        if (isBinary && content.startsWith('data:') && content.includes(';base64,')) {
+          body = content.split(';base64,')[1]; base64 = true; size = Math.round(body.length * 0.75);
+        } else {
+          body = content; size = content.length;
+        }
+        break;
+      }
+    }
+
+    if (body === null) {
+      frame.contentWindow.postMessage({ __type:'__voidFetchResp', id, url, status:404, mime:'text/plain', body:'Not Found', base64:false, size:9 }, '*');
+      return;
+    }
+    frame.contentWindow.postMessage({ __type:'__voidFetchResp', id, url, status:200, mime, body, base64, size }, '*');
+  } catch(err) {
+    try { e.source.postMessage({ __type:'__voidFetchResp', id, url, error: err.message }, '*'); } catch(_) {}
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════
+//  FILE SYSTEM ACCESS API — Shared Real Files
+//  Key design:
+//  - sharedRoots: array of { name, handle, kind:'dir'|'file' }
+//  - sharedFileMap: Map of vPath → { handle, rootName } for ALL files
+//  - sharedFiles: array of open file records (content cached in memory)
+//  - file:// and relative url() refs resolved directly from handles
+// ═══════════════════════════════════════════════════════════════════
+const sharedFSAP = typeof window.showOpenFilePicker === 'function';
+
+let sharedRoots    = [];          // top-level opened dirs/files
+let sharedFileMap  = new Map();   // vPath → { handle, rootName, relPath }
+let sharedFiles    = [];          // open file records with content
+let sharedActiveId = null;
+let sharedTreeExp  = new Set();   // expanded dir paths in tree
+
+// ── Render the full tree ─────────────────────────────────────────
+function sharedRender() {
+  const list = document.getElementById('shared-files-list');
+  const warn = document.getElementById('shared-api-warning');
+  if (!sharedFSAP) warn.style.display = 'block';
+
+  if (!sharedRoots.length) {
+    list.innerHTML = '<div class="shared-empty">No real files open.<br><br>'
+      + 'Use <b>📄</b> to pick file(s) or <b>📁</b> for a whole folder.<br><br>'
+      + 'Files open with <b>full read &amp; write</b> access to your actual disk.<br><br>'
+      + '<span style="color:var(--accent-dim);font-size:10px">Fonts &amp; assets referenced by file:// in CSS<br>are automatically served from disk.</span></div>';
+    return;
+  }
+
+  list.innerHTML = '';
+  for (const root of sharedRoots) {
+    if (root.kind === 'file') {
+      // Single file root
+      const f = sharedFiles.find(x => x.rootName === root.name && x.path === root.name);
+      _sharedRenderFileRow(list, root.name, f ? f.id : null, f ? f.dirty : false, 0);
+    } else {
+      // Directory root — render as collapsible tree
+      _sharedRenderDirNode(list, root.name, root.handle, root.name, 0);
+    }
+  }
+}
+
+function _sharedRenderDirNode(container, label, dirHandle, vDirPath, depth) {
+  const expanded = sharedTreeExp.has(vDirPath);
+
+  const row = document.createElement('div');
+  row.className = 'shared-item shared-dir-row';
+  row.style.paddingLeft = (depth * 14 + 6) + 'px';
+  row.innerHTML = '<span class="si-icon">' + (expanded ? '📂' : '📁') + '</span>'
+    + '<span class="si-name" style="font-weight:600;color:var(--text)">' + escH(label) + '</span>';
+  row.addEventListener('click', function(e) {
+    e.stopPropagation();
+    if (sharedTreeExp.has(vDirPath)) sharedTreeExp.delete(vDirPath);
+    else sharedTreeExp.add(vDirPath);
+    sharedRender();
+  });
+  container.appendChild(row);
+
+  if (!expanded) return;
+
+  // Collect children from sharedFileMap for this dir
+  const children = { dirs: new Map(), files: [] };
+  for (const [vPath, entry] of sharedFileMap) {
+    if (!vPath.startsWith(vDirPath + '/')) continue;
+    const rest = vPath.slice(vDirPath.length + 1); // relative to this dir
+    if (!rest) continue;
+    const slash = rest.indexOf('/');
+    if (slash === -1) {
+      // direct file child
+      files_push: {
+        const f = sharedFiles.find(x => x.vPath === vPath);
+        children.files.push({ name: rest, vPath, id: f ? f.id : null, dirty: f ? f.dirty : false, entry });
+      }
+    } else {
+      // sub-directory — only capture top-level subdir name
+      const subdirName = rest.slice(0, slash);
+      const subdirVPath = vDirPath + '/' + subdirName;
+      if (!children.dirs.has(subdirVPath)) {
+        children.dirs.set(subdirVPath, { name: subdirName, vPath: subdirVPath });
+      }
+    }
+  }
+
+  // Render subdirs first, then files
+  const sortedDirs = [...children.dirs.values()].sort((a,b) => a.name.localeCompare(b.name));
+  for (const dir of sortedDirs) {
+    _sharedRenderDirNode(container, dir.name, null, dir.vPath, depth + 1);
+  }
+  const sortedFiles = children.files.sort((a,b) => a.name.localeCompare(b.name));
+  for (const child of sortedFiles) {
+    _sharedRenderFileRow(container, child.name, child.id, child.dirty, depth + 1, child.vPath);
+  }
+}
+
+function _sharedRenderFileRow(container, name, id, dirty, depth, vPath) {
+  const el = document.createElement('div');
+  el.className = 'shared-item' + (id && id === sharedActiveId ? ' selected' : '');
+  el.style.paddingLeft = (depth * 14 + 6) + 'px';
+  el.innerHTML = '<span class="si-icon">' + getFileIconPlain(name) + '</span>'
+    + '<span class="si-name" title="' + escH(vPath || name) + '">' + escH(name) + '</span>'
+    + (id ? (dirty ? '<span class="si-badge dirty">●</span>' : '<span class="si-badge">✓</span>') : '');
+  if (id) {
+    el.addEventListener('click', () => sharedOpenInEditor(id));
+  } else if (vPath) {
+    // Not yet loaded into memory — load on click
+    el.addEventListener('click', () => sharedLoadAndOpen(vPath));
+  }
+  container.appendChild(el);
+}
+
+// ── Open single files ────────────────────────────────────────────
+async function sharedOpenFile() {
+  if (!sharedFSAP) { termLog('warn', 'File System Access API not supported. Use Chrome or Edge 86+.'); return; }
+  try {
+    const handles = await window.showOpenFilePicker({ multiple: true });
+    for (const handle of handles) {
+      const vPath = handle.name;
+      if (sharedFileMap.has(vPath)) continue;
+      sharedFileMap.set(vPath, { handle, rootName: handle.name, relPath: handle.name });
+      sharedRoots.push({ name: handle.name, handle, kind: 'file' });
+    }
+    sharedRender();
+    // Load and open the last one
+    const last = handles[handles.length - 1];
+    if (last) await sharedLoadAndOpen(last.name);
+  } catch(e) {
+    if (e.name !== 'AbortError') termLog('error', 'Open file failed: ' + e.message);
+  }
+}
+
+// ── Open folder ──────────────────────────────────────────────────
+async function sharedOpenDir() {
+  if (!sharedFSAP) { termLog('warn', 'File System Access API not supported. Use Chrome or Edge 86+.'); return; }
+  try {
+    const dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+    const rootName = dirHandle.name;
+    termLog('sys', 'Opened folder: ' + rootName);
+
+    // Remove existing root with same name if re-opened
+    sharedRoots = sharedRoots.filter(r => r.name !== rootName);
+    // Clean old entries from map
+    for (const k of sharedFileMap.keys()) {
+      if (sharedFileMap.get(k).rootName === rootName) sharedFileMap.delete(k);
+    }
+
+    sharedRoots.push({ name: rootName, handle: dirHandle, kind: 'dir' });
+    sharedTreeExp.add(rootName); // auto-expand root
+
+    // Walk and register ALL file handles (no content loading yet)
+    await sharedIndexDir(dirHandle, rootName, rootName);
+
+    termLog('sys', 'Indexed ' + [...sharedFileMap.values()].filter(e=>e.rootName===rootName).length + ' files in ' + rootName);
+    sharedRender();
+  } catch(e) {
+    if (e.name !== 'AbortError') termLog('error', 'Open folder failed: ' + e.message);
+  }
+}
+
+// Index all file handles recursively — NO content loading (lazy)
+async function sharedIndexDir(dirHandle, rootName, vDirPath) {
+  const skip = new Set(['.git', '.DS_Store', 'node_modules', '.vscode', '.idea', '__pycache__']);
+  const entries = [];
+  for await (const [name, handle] of dirHandle) entries.push([name, handle]);
+  entries.sort((a,b) => a[0].localeCompare(b[0]));
+
+  for (const [name, handle] of entries) {
+    if (skip.has(name)) continue;
+    const vPath = vDirPath + '/' + name;
+    if (handle.kind === 'directory') {
+      await sharedIndexDir(handle, rootName, vPath);
+    } else {
+      sharedFileMap.set(vPath, { handle, rootName, relPath: vPath.slice(rootName.length + 1) });
+    }
+  }
+}
+
+// ── Load file content from handle, then open in editor ──────────
+async function sharedLoadAndOpen(vPath) {
+  // Already loaded?
+  const existing = sharedFiles.find(f => f.vPath === vPath);
+  if (existing) { await sharedOpenInEditor(existing.id); return; }
+
+  const entry = sharedFileMap.get(vPath);
+  if (!entry) { termLog('error', 'No handle for: ' + vPath); return; }
+
+  const { handle, rootName, relPath } = entry;
+  const file = await handle.getFile();
+  const isBinary = /\.(png|jpg|jpeg|gif|webp|bmp|ico|woff2?|ttf|otf|mp3|mp4|wav|ogg|pdf|zip|gz|wasm|avif|svg)$/i.test(handle.name);
+
+  let content;
+  if (isBinary) {
+    const buf = await file.arrayBuffer();
+    const bytes = new Uint8Array(buf);
+    let b64 = '';
+    const chunk = 8192;
+    for (let i = 0; i < bytes.length; i += chunk) {
+      b64 += String.fromCharCode.apply(null, bytes.subarray(i, Math.min(i+chunk, bytes.length)));
+    }
+    const ext = handle.name.split('.').pop().toLowerCase();
+    content = 'data:' + getMime(ext) + ';base64,' + btoa(b64);
+  } else {
+    content = await file.text();
+  }
+
+  const id = 'sf_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+  const record = {
+    id, name: handle.name, handle, rootName,
+    vPath,            // canonical virtual path e.g. "myproject/src/app.js"
+    relPath,          // path relative to root e.g. "src/app.js"
+    content, dirty: false, isBinary,
+    listenerDispose: null
+  };
+  sharedFiles.push(record);
+
+  // Write to VFS at /<vPath> so preview fetch bridge can serve it
+  await fsWriteFileSafe('/' + vPath, content);
+
+  termLog('sys', 'Loaded: ' + vPath + ' (' + (file.size/1024).toFixed(1) + ' KB)');
+  await sharedOpenInEditor(id);
+  sharedRender();
+}
+
+async function sharedOpenInEditor(id) {
+  const f = sharedFiles.find(x => x.id === id);
+  if (!f) return;
+  sharedActiveId = id;
+
+  const editorPath = '/' + f.vPath;
+
+  if (!f.isBinary) {
+    let tab = openTabs.find(t => t.path === editorPath);
+    if (!tab) {
+      const lang = getLang(editorPath);
+      const uriStr = 'inmemory://disk/' + f.vPath;
+      const uri = monaco.Uri.parse(uriStr);
+      let model = monaco.editor.getModel(uri);
+      if (!model) model = monaco.editor.createModel(f.content, lang, uri);
+      else model.setValue(f.content);
+
+      tab = { path: editorPath, model, dirty: false, sharedId: id };
+      openTabs.push(tab);
+
+      // Attach ONE change listener per model
+      const disposable = model.onDidChangeContent(() => {
+        f.content = model.getValue();
+        if (!f.dirty) {
+          f.dirty = true;
+          tab.dirty = true;
+          renderTabs();
+          sharedRender();
+        }
+      });
+      f.listenerDispose = disposable;
+    } else {
+      tab.sharedId = id;
+    }
+
+    activeTab = editorPath;
+    monacoEditor.setModel(tab.model);
+    document.getElementById('empty-state').style.display = 'none';
+    renderTabs();
+    updateStatusBar(editorPath);
+    monacoEditor.focus();
+  } else {
+    termLog('info', 'Binary: ' + f.name + ' — served from disk via /' + f.vPath);
+  }
+  sharedRender();
+}
+
+// ── Save back to real disk ───────────────────────────────────────
+async function sharedSaveActive() {
+  let f = sharedFiles.find(x => x.id === sharedActiveId);
+  if (!f) {
+    const tab = openTabs.find(t => t.path === activeTab && t.sharedId);
+    if (tab) f = sharedFiles.find(x => x.id === tab.sharedId);
+  }
+  if (!f) { termLog('warn', 'No shared file is active.'); return; }
+  await sharedWriteFile(f);
+}
+
+async function sharedSaveAll() {
+  const dirty = sharedFiles.filter(f => f.dirty);
+  if (!dirty.length) { termLog('info', 'All shared files are clean.'); return; }
+  for (const f of dirty) await sharedWriteFile(f);
+}
+
+async function sharedWriteFile(f) {
+  try {
+    const editorPath = '/' + f.vPath;
+    const tab = openTabs.find(t => t.path === editorPath);
+    if (tab) f.content = tab.model.getValue();
+
+    const writable = await f.handle.createWritable();
+    if (f.isBinary && f.content.startsWith('data:') && f.content.includes(';base64,')) {
+      const b64 = f.content.split(';base64,')[1];
+      const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+      await writable.write(bytes);
+    } else {
+      await writable.write(f.content);
+    }
+    await writable.close();
+    f.dirty = false;
+    if (tab) tab.dirty = false;
+    // Also sync VFS
+    await fsWriteFileSafe('/' + f.vPath, f.content);
+    termLog('sys', 'Saved to disk: ' + f.name);
+    renderTabs();
+    sharedRender();
+  } catch(e) {
+    termLog('error', 'Save failed (' + f.name + '): ' + e.message);
+  }
+}
+
+// ── Read binary file directly from disk handle (for CSS url() resolver) ──
+async function sharedReadBinaryHandle(vPath) {
+  const entry = sharedFileMap.get(vPath);
+  if (!entry) return null;
+  try {
+    const file = await entry.handle.getFile();
+    const buf = await file.arrayBuffer();
+    const bytes = new Uint8Array(buf);
+    let b64 = '';
+    const chunk = 8192;
+    for (let i = 0; i < bytes.length; i += chunk) {
+      b64 += String.fromCharCode.apply(null, bytes.subarray(i, Math.min(i+chunk, bytes.length)));
+    }
+    const ext = entry.handle.name.split('.').pop().toLowerCase();
+    return 'data:' + getMime(ext) + ';base64,' + btoa(b64);
+  } catch(e) {
+    return null;
+  }
+}
+
+async function sharedImportToVFS() {
+  let count = 0;
+  for (const f of sharedFiles) {
+    await fsWriteFileSafe('/' + f.relPath, f.content);
+    count++;
+  }
+  await refreshTree();
+  termLog('sys', 'Imported ' + count + ' shared file(s) to VFS.');
+  setActivity('files');
+}
+
+function sharedClearAll() {
+  if (!sharedRoots.length) return;
+  showConfirm('Remove all shared files?', 'Disk files are not deleted.', () => {
+    for (const f of sharedFiles) {
+      if (f.listenerDispose) try { f.listenerDispose.dispose(); } catch(e) {}
+    }
+    sharedFiles = [];
+    sharedFileMap.clear();
+    sharedRoots = [];
+    sharedActiveId = null;
+    sharedTreeExp.clear();
+    sharedRender();
+  });
+}
+
+//  BOOT
+// ═══════════════════════════════════════════════════════════════════
+boot().catch(e => {
+  console.error('Boot failed:', e);
+  document.getElementById('terminal-output').innerHTML =
+    `<div class="term-line"><span class="term-tag error">ERROR</span><span class="term-msg error">Boot failed: ${e.message}. Try refreshing.</span></div>`;
+});
+</script>
+</body>
+</html>
