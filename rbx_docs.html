@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>RBX Scripting & Executor Docs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#08090d;--panel:#0d0f16;--panel2:#111420;--border:#1b1f2e;--border2:#252a3c;
+  --acc:#e8ff47;--acc2:#47d1ff;--acc3:#ff6b6b;--acc4:#b47cff;--acc5:#3dffb0;
+  --txt:#c8d0e0;--muted:#4e5570;--head:#eef2ff;--code:#0e111a;
+  --sw:268px;
+}
+*,::before,::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--txt);font-family:'JetBrains Mono',monospace;font-size:13.5px;line-height:1.75;display:flex;min-height:100vh}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+/* SIDEBAR */
+#sb{width:var(--sw);min-width:var(--sw);background:var(--panel);border-right:1px solid var(--border);height:100vh;position:sticky;top:0;overflow-y:auto;flex-shrink:0;padding-bottom:48px}
+.sb-logo{padding:22px 18px 16px;border-bottom:1px solid var(--border)}
+.sb-logo span{font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--acc);letter-spacing:.06em;display:block}
+.sb-logo small{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em}
+.sb-grp{font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);padding:16px 18px 5px}
+#sb a{display:flex;align-items:center;gap:8px;padding:6px 18px;color:var(--txt);text-decoration:none;font-size:12px;border-left:2px solid transparent;transition:all .13s}
+#sb a:hover{color:var(--head);background:rgba(232,255,71,.04);border-left-color:var(--acc)}
+#sb a .t{margin-left:auto;font-size:9px;padding:1px 6px;border-radius:3px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.ty{background:rgba(232,255,71,.1);color:var(--acc)}
+.tb{background:rgba(71,209,255,.1);color:var(--acc2)}
+.tr{background:rgba(255,107,107,.1);color:var(--acc3)}
+.tg{background:rgba(61,255,176,.1);color:var(--acc5)}
+/* LAYOUT */
+#wrap{flex:1;min-width:0;display:flex;flex-direction:column}
+.topbar{position:sticky;top:0;z-index:9;background:rgba(8,9,13,.92);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);padding:9px 56px;font-size:11px;color:var(--muted);display:flex;align-items:center;gap:8px}
+.topbar a{color:var(--acc2);text-decoration:none;font-size:11px}
+.topbar a:hover{text-decoration:underline}
+main{padding:0 56px 80px;max-width:980px}
+/* HERO */
+.hero{padding:56px 0 48px;border-bottom:1px solid var(--border);margin-bottom:52px;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:-80px;right:-160px;width:500px;height:500px;background:radial-gradient(circle,rgba(232,255,71,.05) 0%,transparent 65%);pointer-events:none}
+.hbadge{display:inline-flex;align-items:center;gap:7px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--acc);border:1px solid rgba(232,255,71,.25);padding:4px 11px;border-radius:4px;margin-bottom:20px}
+.hero h1{font-family:'Syne',sans-serif;font-size:clamp(30px,4vw,52px);font-weight:800;color:var(--head);line-height:1.08;letter-spacing:-.02em;margin-bottom:16px}
+.hero h1 span{color:var(--acc)}
+.hero p{font-size:12.5px;color:var(--muted);max-width:540px;line-height:1.85}
+.hero-links{display:flex;flex-wrap:wrap;gap:10px;margin-top:24px}
+.hl{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:5px;font-size:11.5px;font-weight:600;text-decoration:none;border:1px solid;letter-spacing:.03em;transition:all .15s}
+.hl-y{border-color:rgba(232,255,71,.35);color:var(--acc);background:rgba(232,255,71,.06)}
+.hl-y:hover{background:rgba(232,255,71,.12);border-color:var(--acc)}
+.hl-b{border-color:rgba(71,209,255,.3);color:var(--acc2);background:rgba(71,209,255,.05)}
+.hl-b:hover{background:rgba(71,209,255,.1)}
+.hl-p{border-color:rgba(180,124,255,.3);color:var(--acc4);background:rgba(180,124,255,.05)}
+.hl-p:hover{background:rgba(180,124,255,.1)}
+/* SECTIONS */
+section{margin-bottom:60px;scroll-margin-top:30px}
+.sh{display:flex;align-items:center;gap:12px;margin-bottom:26px;padding-bottom:13px;border-bottom:1px solid var(--border)}
+.si{width:34px;height:34px;border-radius:8px;display:grid;place-items:center;font-size:15px;flex-shrink:0}
+.sh h2{font-family:'Syne',sans-serif;font-size:21px;font-weight:800;color:var(--head);letter-spacing:-.01em}
+.sh .sbadge{margin-left:auto;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:3px 8px;border-radius:3px}
+h3{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--head);margin:28px 0 11px;letter-spacing:-.01em}
+h3::before{content:'▸ ';color:var(--acc);font-size:11px}
+h4{font-size:12.5px;color:var(--acc2);margin:18px 0 8px;font-weight:600}
+p{margin-bottom:12px}
+/* CODE */
+.cb{background:var(--code);border:1px solid var(--border);border-radius:8px;margin:16px 0;overflow:hidden}
+.ch{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:rgba(255,255,255,.02);border-bottom:1px solid var(--border)}
+.ch span{font-size:10px;color:var(--muted);letter-spacing:.07em;text-transform:uppercase}
+.dots{display:flex;gap:5px}
+.dots i{width:8px;height:8px;border-radius:50%;display:block}
+.dots i:nth-child(1){background:#ff5f57}.dots i:nth-child(2){background:#febc2e}.dots i:nth-child(3){background:#28c840}
+pre{padding:16px;overflow-x:auto;font-size:12px;line-height:1.85}
+code{font-family:'JetBrains Mono',monospace}
+.kw{color:#ff79c6}.fn{color:#50fa7b}.str{color:#f1fa8c}.cmt{color:#44475a;font-style:italic}
+.num{color:#bd93f9}.var{color:#8be9fd}.cls{color:#ffb86c}.op{color:#ff6b6b}
+/* FUNCTION TABLE */
+.ft{width:100%;border-collapse:collapse;margin:16px 0;font-size:12px}
+.ft th{text-align:left;padding:8px 13px;background:var(--code);color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.ft td{padding:9px 13px;border-bottom:1px solid rgba(27,31,46,.5);vertical-align:top}
+.ft tr:last-child td{border-bottom:none}
+.ft tr:hover td{background:rgba(255,255,255,.018)}
+.fn-n{color:var(--acc2);font-weight:600;white-space:nowrap;font-size:12px}
+.fn-s{color:var(--acc4);font-size:11px;line-height:1.5}
+.fn-d{color:var(--txt);font-size:12px}
+.fn-r{color:var(--acc);font-size:11px;white-space:nowrap}
+.fn-a{color:var(--muted);font-size:10px;line-height:1.6}
+.opt{font-size:9px;padding:1px 5px;border-radius:3px;background:rgba(180,124,255,.12);color:var(--acc4);font-weight:700;margin-left:4px;vertical-align:middle}
+/* CARDS */
+.cg{display:grid;grid-template-columns:repeat(auto-fill,minmax(195px,1fr));gap:11px;margin:16px 0}
+.card{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:15px;transition:border-color .18s}
+.card:hover{border-color:var(--border2)}
+.card h4{font-size:12.5px;color:var(--head);margin:0 0 6px;font-weight:700}
+.card h4::before{display:none}
+.card p{font-size:11px;color:var(--muted);margin:0;line-height:1.6}
+/* CALLOUTS */
+.co{border-radius:6px;padding:13px 15px;margin:16px 0;display:flex;gap:11px;align-items:flex-start;font-size:12.5px}
+.ci{font-size:14px;flex-shrink:0;margin-top:2px}
+.warn{background:rgba(255,107,107,.07);border-left:3px solid var(--acc3)}
+.info{background:rgba(71,209,255,.06);border-left:3px solid var(--acc2)}
+.tip{background:rgba(232,255,71,.05);border-left:3px solid var(--acc)}
+.ok{background:rgba(61,255,176,.05);border-left:3px solid var(--acc5)}
+/* PILLS */
+.pr{display:flex;flex-wrap:wrap;gap:7px;margin:11px 0}
+.pill{font-size:11px;padding:3px 9px;border-radius:20px;border:1px solid;font-weight:600}
+.py{border-color:rgba(232,255,71,.35);color:var(--acc);background:rgba(232,255,71,.05)}
+.pb{border-color:rgba(71,209,255,.3);color:var(--acc2);background:rgba(71,209,255,.04)}
+.pp{border-color:rgba(180,124,255,.3);color:var(--acc4);background:rgba(180,124,255,.04)}
+.pg{border-color:rgba(61,255,176,.3);color:var(--acc5);background:rgba(61,255,176,.04)}
+/* COMPARISON */
+.ct{width:100%;border-collapse:collapse;margin:16px 0;font-size:12px}
+.ct th{padding:8px 13px;background:var(--code);border:1px solid var(--border);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);text-align:left}
+.ct td{padding:9px 13px;border:1px solid var(--border);vertical-align:top}
+.ct td:first-child{color:var(--head);font-weight:600}
+.yes{color:#50fa7b}.no{color:var(--acc3)}.part{color:var(--acc)}
+/* TWOCOL */
+.twocol{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0}
+@media(max-width:700px){.twocol{grid-template-columns:1fr}}
+hr{border:none;border-top:1px solid var(--border);margin:36px 0}
+a{color:var(--acc2);text-decoration:none}
+a:hover{text-decoration:underline}
+.i-luau{background:rgba(255,165,0,.1)}.i-exec{background:rgba(180,124,255,.1)}
+.i-loc{background:rgba(255,107,107,.1)}.i-srv{background:rgba(61,255,176,.1)}
+.i-unc{background:rgba(232,255,71,.1)}.i-sunc{background:rgba(71,209,255,.1)}
+ic,.ic{background:rgba(255,255,255,.06);padding:1px 5px;border-radius:3px;font-size:12px;color:var(--acc2)}
+@media(max-width:800px){#sb{display:none}main{padding:0 22px 60px}.topbar{padding:9px 22px}}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav id="sb">
+  <div class="sb-logo"><span>RBX · DOCS</span><small>UNC · sUNC · Luau · API</small></div>
+  <div class="sb-grp">Language</div>
+  <a href="#luau">📜 Luau Language</a>
+  <div class="sb-grp">Script Types</div>
+  <a href="#executor">⚙️ Executors</a>
+  <a href="#localscript">🖥️ LocalScript <span class="t tr">Client</span></a>
+  <a href="#serverscript">🌐 ServerScript <span class="t tg">Server</span></a>
+  <div class="sb-grp">UNC Standard</div>
+  <a href="#unc-overview">📋 UNC Overview <span class="t ty">UNC</span></a>
+  <a href="#unc-fs">📁 File System</a>
+  <a href="#unc-crypto">🔐 Cryptography</a>
+  <a href="#unc-cache">🗃️ Cache</a>
+  <a href="#unc-debug">🐛 Debug Library</a>
+  <a href="#unc-drawing">🖊️ Drawing API</a>
+  <a href="#unc-instance">🧱 Instance / Game</a>
+  <a href="#unc-closures">⚡ Closures &amp; Hooks</a>
+  <a href="#unc-env">🌍 Environment</a>
+  <a href="#unc-mouse">🖱️ Mouse Input</a>
+  <a href="#unc-console">🖥️ rconsole</a>
+  <a href="#unc-network">🌐 Network / HTTP</a>
+  <div class="sb-grp">sUNC</div>
+  <a href="#sunc">⚡ sUNC Overview <span class="t tb">sUNC</span></a>
+  <a href="#sunc-closures">🔗 sUNC Closures</a>
+  <a href="#sunc-drawing">🎨 sUNC Drawing</a>
+  <a href="#sunc-encoding">📦 sUNC Encoding</a>
+  <a href="#sunc-env">🌍 sUNC Environment</a>
+  <a href="#sunc-instances">🧱 sUNC Instances</a>
+  <a href="#sunc-metatable">🔩 sUNC Metatable</a>
+  <a href="#sunc-reflection">🔭 sUNC Reflection</a>
+  <a href="#sunc-scripts">📜 sUNC Scripts</a>
+  <a href="#sunc-signals">📡 sUNC Signals</a>
+  <a href="#sunc-ws">🔌 sUNC WebSocket</a>
+  <div class="sb-grp">Roblox API</div>
+  <a href="#local-fns">🖥️ Client-Side API <span class="t tr">Local</span></a>
+  <a href="#server-fns">🌐 Server-Side API <span class="t tg">Server</span></a>
+</nav>
+
+<div id="wrap">
+  <div class="topbar">
+    RBX Docs <span style="color:var(--muted)">›</span>
+    <a href="https://create.roblox.com/docs/scripting" target="_blank">create.roblox.com/docs</a>
+    <span style="color:var(--muted)">·</span>
+    <a href="https://sunc.su" target="_blank">sunc.su</a>
+    <span style="color:var(--muted)">·</span>
+    <a href="https://docs.sunc.su" target="_blank">docs.sunc.su</a>
+  </div>
+
+  <main>
+
+    <!-- HERO -->
+    <div class="hero">
+      <div class="hbadge">📚 2025 Reference</div>
+      <h1>Roblox Scripting<br/><span>UNC · sUNC · Luau</span></h1>
+      <p>Complete reference for Roblox Luau, Executor APIs, the Unified Naming Convention (UNC), sUNC standard, LocalScript client-side functions, and ServerScript server-side functions.</p>
+      <div class="hero-links">
+        <a class="hl hl-y" href="https://create.roblox.com/docs/scripting" target="_blank">📖 Roblox Docs</a>
+        <a class="hl hl-b" href="https://sunc.su" target="_blank">⚡ sUNC Site</a>
+        <a class="hl hl-p" href="https://docs.sunc.su" target="_blank">📋 sUNC Docs</a>
+      </div>
+    </div>
+
+    <!-- ═══ LUAU ═══ -->
+    <section id="luau">
+      <div class="sh"><div class="si i-luau">📜</div><h2>Luau Language</h2><span class="sbadge" style="background:rgba(255,165,0,.1);color:orange">Language</span></div>
+      <p>Luau is Roblox's fast, safe, gradually-typed scripting language — a strict superset of Lua 5.1. All Roblox scripts are written in Luau. It adds optional typing, performance improvements, and syntax extensions not in standard Lua.</p>
+      <div class="cg">
+        <div class="card"><h4>Type System</h4><p>Gradual <code>type</code> annotations with full inference and generics.</p></div>
+        <div class="card"><h4>Performance</h4><p>Compiled to bytecode with JIT-optimised native codegen for hot paths.</p></div>
+        <div class="card"><h4>Safety</h4><p>Sandboxed per-script environment — no OS or filesystem access by default.</p></div>
+        <div class="card"><h4>Compatibility</h4><p>Superset of Lua 5.1 — most Lua libs work with minor tweaks.</p></div>
+      </div>
+      <h3>Variables &amp; Types</h3>
+      <div class="cb"><div class="ch"><div class="dots"><i></i><i></i><i></i></div><span>variables.luau</span></div>
+      <pre><code><span class="kw">local</span> <span class="var">name</span>: <span class="cls">string</span> = <span class="str">"Player1"</span>
+<span class="kw">local</span> <span class="var">score</span>: <span class="cls">number</span> = <span class="num">0</span>
+<span class="kw">local</span> <span class="var">alive</span>: <span class="cls">boolean</span> = <span class="kw">true</span>
+<span class="kw">local</span> <span class="var">data</span>: {<span class="cls">string</span>: <span class="cls">number</span>} = {}
+
+<span class="cmt">-- String interpolation (Luau exclusive)</span>
+<span class="fn">print</span>(<span class="str">`Hello, {name}! Score: {score}`</span>)
+
+<span class="cmt">-- Compound assignment operators</span>
+<span class="var">score</span> <span class="op">+=</span> <span class="num">10</span>
+<span class="var">score</span> <span class="op">*=</span> <span class="num">2</span>
+<span class="var">score</span> <span class="op">-=</span> <span class="num">3</span></code></pre></div>
+      <h3>Functions &amp; Generics</h3>
+      <div class="cb"><div class="ch"><div class="dots"><i></i><i></i><i></i></div><span>functions.luau</span></div>
+      <pre><code><span class="kw">local function</span> <span class="fn">add</span>(<span class="var">a</span>: <span class="cls">number</span>, <span class="var">b</span>: <span class="cls">number</span>): <span class="cls">number</span>
+    <span class="kw">return</span> <span class="var">a</span> <span class="op">+</span> <span class="var">b</span>
+<span class="kw">end</span>
+
+<span class="cmt">-- Generic function</span>
+<span class="kw">local function</span> <span class="fn">first</span>&lt;<span class="cls">T</span>&gt;(<span class="var">arr</span>: {<span class="cls">T</span>}): <span class="cls">T</span>
+    <span class="kw">return</span> <span class="var">arr</span>[<span class="num">1</span>]
+<span class="kw">end</span>
+
+<span class="cmt">-- Type alias</span>
+<span class="kw">type</span> <span class="cls">PlayerData</span> = {
+    name: <span class="cls">string</span>,
+    level: <span class="cls">number</span>,
+    coins: <span class="cls">number</span>
+}</code></pre></div>
+      <h3>OOP via Metatables</h3>
+      <div class="cb"><div class="ch"><div class="dots"><i></i><i></i><i></i></div><span>oop.luau</span></div>
+      <pre><code><span class="kw">local</span> <span class="cls">Enemy</span> = {}
+<span class="cls">Enemy</span>.__index = <span class="cls">Enemy</span>
+
+<span class="kw">function</span> <span class="cls">Enemy</span>.<span class="fn">new</span>(<span class="var">name</span>: <span class="cls">string</span>, <span class="var">hp</span>: <span class="cls">number</span>)
+    <span class="kw">return</span> <span class="fn">setmetatable</span>({ name = <span class="var">name</span>, hp = <span class="var">hp</span> }, <span class="cls">Enemy</span>)
+<span class="kw">end</span>
+
+<span class="kw">function</span> <span class="cls">Enemy</span>:<span class="fn">takeDamage</span>(<span class="var">dmg</span>: <span class="cls">number</span>)
+    <span class="kw">self</span>.hp <span class="op">-=</span> <span class="var">dmg</span>
+    <span class="kw">if</span> <span class="kw">self</span>.hp &lt;= <span class="num">0</span> <span class="kw">then</span>
+        <span class="fn">print</span>(<span class="str">`{self.name} died!`</span>)
+    <span class="kw">end</span>
+<span class="kw">end</span>
+
+<span class="kw">local</span> <span class="var">boss</span> = <span class="cls">Enemy</span>.<span class="fn">new</span>(<span class="str">"Dragon"</span>, <span class="num">500</span>)
+<span class="var">boss</span>:<span class="fn">takeDamage</span>(<span class="num">120</span>)</code></pre></div>
+      <h3>Luau-Exclusive Features</h3>
+      <div class="pr">
+        <span class="pill py">String interpolation `{}`</span>
+        <span class="pill py">Compound operators += -= *=</span>
+        <span class="pill pb">Generics &lt;T&gt;</span>
+        <span class="pill pb">Type annotations</span>
+        <span class="pill pp">continue keyword</span>
+        <span class="pill pp">Native codegen</span>
+        <span class="pill pg">Type narrowing</span>
+      </div>
+    </section>
+
+    <!-- ═══ EXECUTORS ═══ -->
+    <section id="executor">
+      <div class="sh"><div class="si i-exec">⚙️</div><h2>Executors</h2><span class="sbadge" style="background:rgba(180,124,255,.1);color:var(--acc4)">Exploit Tool</span></div>
+      <div class="co warn"><span class="ci">⚠️</span><div>Using executors in live Roblox games violates Roblox TOS and may result in a permanent ban. This documentation is for <strong>educational purposes only</strong>.</div></div>
+      <p>An <strong>executor</strong> is a third-party application that injects into the Roblox client process, elevating the script identity level and exposing UNC/sUNC APIs beyond what normal LocalScripts can access.</p>
+      <h3>Identity Levels</h3>
+      <table class="ct">
+        <tr><th>Level</th><th>Context</th><th>Capabilities</th></tr>
+        <tr><td>0</td><td>Plugin (Studio)</td><td>Full Studio access</td></tr>
+        <tr><td>2</td><td>LocalScript</td><td>Standard client APIs only</td></tr>
+        <tr><td>3</td><td>CoreScript</td><td>Roblox internal UI scripts</td></tr>
+        <tr><td>6</td><td>CoreScript+</td><td>Extended Roblox system APIs</td></tr>
+        <tr><td style="color:var(--acc)">8</td><td style="color:var(--acc)">Executor</td><td style="color:var(--acc)">Full UNC/sUNC API access</td></tr>
+      </table>
+      <h3>How Injection Works</h3>
+      <div class="cg">
+        <div class="card"><h4>1. DLL Injection</h4><p>Injects a dynamic library into RobloxPlayerBeta.exe to gain execution context.</p></div>
+        <div class="card"><h4>2. VM Hook</h4><p>Hooks/replaces the Luau scheduler to elevate script identity to Level 8.</p></div>
+        <div class="card"><h4>3. API Exposure</h4><p>Exposes UNC/sUNC globals via the executor's <code>getgenv()</code> environment.</p></div>
+        <div class="card"><h4>4. Anti-Cheat Bypass</h4><p>Uses obfuscation or kernel drivers to evade Hyperion/Byfron anti-tamper.</p></div>
+      </div>
+      <h3>Executor Comparison</h3>
+      <table class="ct">
+        <tr><th>Executor</th><th>UNC Pass</th><th>sUNC</th><th>Cost</th></tr>
+        <tr><td>Synapse X</td><td class="yes">~97%</td><td class="yes">✓</td><td class="no">Paid</td></tr>
+        <tr><td>Script-Ware</td><td class="yes">~96%</td><td class="yes">✓</td><td class="no">Paid</td></tr>
+        <tr><td>Delta</td><td class="part">~82%</td><td class="part">Partial</td><td class="yes">Free</td></tr>
+        <tr><td>Fluxus</td><td class="part">~78%</td><td class="no">✗</td><td class="yes">Free</td></tr>
+        <tr><td>Hydrogen</td><td class="part">~75%</td><td class="no">✗</td><td class="yes">Free</td></tr>
+      </table>
+    </section>
+
+    <!-- ═══ LOCALSCRIPT ═══ -->
+    <section id="localscript">
+      <div class="sh"><div class="si i-loc">🖥️</div><h2>LocalScript</h2><span class="sbadge" style="background:rgba(255,107,107,.1);color:var(--acc3)">Client-Side</span></div>
+      <p>A <strong>LocalScript</strong> runs exclusively on the client. It can access <code>Players.LocalPlayer</code>, <code>UserInputService</code>, and <code>workspace.CurrentCamera</code>. Changes made here are NOT replicated to the server.</p>
+      <div class="cg">
+        <div class="card"><h4>Placement</h4><p>StarterPlayerScripts, StarterCharacterScripts, StarterGui, or inside a Tool.</p></div>
+        <div class="card"><h4>LocalPlayer</h4><p>Has full access to the local player, their character, and PlayerGui.</p></div>
+        <div class="card"><h4>No server power</h4><p>Cannot access ServerScriptService or directly modify server-protected data.</p></div>
+        <div class="card"><h4>Replication</h4><p>Must use RemoteEvents to communicate server-authoritative changes.</p></div>
+      </div>
+      <h3>Basic Example</h3>
+      <div class="cb"><div class="ch"><div class="dots"><i></i><i></i><i></i></div><span>LocalScript · StarterPlayerScripts</span></div>
+      <pre><code><span class="kw">local</span> <span class="var">Players</span> = game:<span class="fn">GetService</span>(<span class="str">"Players"</span>)
+<span class="kw">local</span> <span class="var">UIS</span> = game:<span class="fn">GetService</span>(<span class="str">"UserInputService"</span>)
+<span class="kw">local</span> <span class="var">localPlayer</span> = <span class="var">Players</span>.LocalPlayer
+<span class="kw">local</span> <span class="var">character</span> = <span class="var">localPlayer</span>.Character <span class="op">or</span> <span class="var">localPlayer</span>.CharacterAdded:<span class="fn">Wait</span>()
+<span class="kw">local</span> <span class="var">humanoid</span> = <span class="var">character</span>:<span class="fn">WaitForChild</span>(<span class="str">"Humanoid"</span>)
+
+<span class="var">UIS</span>.InputBegan:<span class="fn">Connect</span>(<span class="kw">function</span>(<span class="var">input</span>, <span class="var">gp</span>)
+    <span class="kw">if</span> <span class="var">gp</span> <span class="kw">then</span> <span class="kw">return</span> <span class="kw">end</span>
+    <span class="kw">if</span> <span class="var">input</span>.KeyCode == Enum.KeyCode.E <span class="kw">then</span>
+        <span class="fn">print</span>(<span class="str">"E was pressed!"</span>)
+    <span class="kw">end</span>
+<span class="kw">end</span>)</code></pre></div>
+      <h3>FireServer (Client → Server)</h3>
+      <div class="cb"><div class="ch"><div class="dots"><i></i><i></i><i></i></div><span>LocalScript · FireServer</span></div>
+      <pre><code><span class="kw">local</span> <span class="var">RS</span> = game:<span class="fn">GetService</span>(<span class="str">"ReplicatedStorage"</span>)
+<span class="kw">local</span> <span class="var">remote</span> = <span class="var">RS</span>:<span class="fn">WaitForChild</span>(<span class="str">"BuyItem"</span>)
+
+<span class="var">remote</span>:<span class="fn">FireServer</span>(<span class="str">"Sword"</span>, <span class="num">100</span>)
+
+<span class="cmt">-- Listen for server reply</span>
+<span class="kw">local</span> <span class="var">result</span> = <span class="var">RS</span>:<span class="fn">WaitForChild</span>(<span class="str">"PurchaseResult"</span>)
+<span class="var">result</span>.OnClientEvent:<span class="fn">Connect</span>(<span class="kw">function</span>(<span class="var">ok</span>, <span class="var">msg</span>)
+    <span class="fn">print</span>(<span class="str">"Result:"</span>, <span class="var">ok</span>, <span class="var">msg</span>)
+<span class="kw">end</span>)</code></pre></div>
+    </section>
+
+    <!-- ═══ SERVERSCRIPT ═══ -->
+    <section id="serverscript">
+      <div class="sh"><div class="si i-srv">🌐</div><h2>ServerScript (Script)</h2><span class="sbadge" style="background:rgba(61,255,176,.1);color:var(--acc5)">Server-Side</span></div>
+      <p>A <strong>Script</strong> runs on the Roblox server. It has authority over game state, datastores, and security logic. It cannot directly interact with any single client's input or screen.</p>
+      <div class="cg">
+        <div class="card"><h4>Placement</h4><p>ServerScriptService is recommended. Also works in workspace (not secure).</p></div>
+        <div class="card"><h4>Authority</h4><p>Server is the authority. Always validate RemoteEvent data server-side.</p></div>
+        <div class="card"><h4>DataStores</h4><p>Only server scripts can use DataStoreService to persist player data.</p></div>
+        <div class="card"><h4>All Players</h4><p>Can access and iterate all connected players via the Players service.</p></div>
+      </div>
+      <h3>Basic Example</h3>
+      <div class="cb"><div class="ch"><div class="dots"><i></i><i></i><i></i></div><span>Script · ServerScriptService</span></div>
+      <pre><code><span class="kw">local</span> <span class="var">Players</span> = game:<span class="fn">GetService</span>(<span class="str">"Players"</span>)
+<span class="kw">local</span> <span class="var">DSS</span> = game:<span class="fn">GetService</span>(<span class="str">"DataStoreService"</span>)
+<span class="kw">local</span> <span class="var">coinStore</span> = <span class="var">DSS</span>:<span class="fn">GetDataStore</span>(<span class="str">"Coins_v1"</span>)
+
+<span class="var">Players</span>.PlayerAdded:<span class="fn">Connect</span>(<span class="kw">function</span>(<span class="var">player</span>)
+    <span class="kw">local</span> <span class="var">ok</span>, <span class="var">data</span> = <span class="fn">pcall</span>(<span class="kw">function</span>()
+        <span class="kw">return</span> <span class="var">coinStore</span>:<span class="fn">GetAsync</span>(<span class="str">"uid"</span> <span class="op">..</span> <span class="var">player</span>.UserId)
+    <span class="kw">end</span>)
+    <span class="kw">local</span> <span class="var">coins</span> = (<span class="var">ok</span> <span class="kw">and</span> <span class="var">data</span>) <span class="op">or</span> <span class="num">0</span>
+    <span class="fn">print</span>(<span class="var">player</span>.Name, <span class="str">"joined with"</span>, <span class="var">coins</span>, <span class="str">"coins"</span>)
+<span class="kw">end</span>)</code></pre></div>
+      <h3>LocalScript vs Script Comparison</h3>
+      <table class="ct">
+        <tr><th>Feature</th><th>LocalScript (Client)</th><th>Script (Server)</th></tr>
+        <tr><td>Runs on</td><td>Each player's machine</td><td>Roblox server</td></tr>
+        <tr><td>LocalPlayer</td><td class="yes">✓ Accessible</td><td class="no">✗ nil</td></tr>
+        <tr><td>DataStoreService</td><td class="no">✗ Not available</td><td class="yes">✓ Full access</td></tr>
+        <tr><td>UserInputService</td><td class="yes">✓ Full access</td><td class="no">✗ No input</td></tr>
+        <tr><td>PlayerGui</td><td class="yes">✓ Direct access</td><td class="no">✗ Indirect only</td></tr>
+        <tr><td>Security</td><td class="no">Not trusted</td><td class="yes">Authoritative</td></tr>
+        <tr><td>RemoteEvents</td><td>FireServer / OnClientEvent</td><td>FireClient / OnServerEvent</td></tr>
+      </table>
+    </section>
+
+    <!-- ═══ UNC OVERVIEW ═══ -->
+    <section id="unc-overview">
+      <div class="sh"><div class="si i-unc">📋</div><h2>UNC — Unified Naming Convention</h2><span class="sbadge" style="background:rgba(232,255,71,.1);color:var(--acc)">UNC</span></div>
+      <p>The <strong>Unified Naming Convention (UNC)</strong> is a community standard defining a common API surface for Roblox script executors. Executors that implement UNC expose the same globally-named functions, making exploit scripts portable across different executors.</p>
+      <div class="co info"><span class="ci">ℹ️</span><div>UNC tests both the presence AND correct behaviour of each function. A function that exists but returns wrong results is marked <strong>fail</strong>, not pass.</div></div>
+      <h3>Result Indicators</h3>
+      <table class="ct">
+        <tr><th>Icon</th><th>Meaning</th></tr>
+        <tr><td class="yes">✅ Pass</td><td>Exists AND behaves correctly</td></tr>
+        <tr><td class="no">⛔ Fail</td><td>Missing, or exists but behavior is broken</td></tr>
+        <tr><td style="color:var(--acc2)">⏺️ Exists-only</td><td>Exists but behavior untested, or optional feature missing</td></tr>
+        <tr><td style="color:var(--acc)">⚠️ Alias missing</td><td>Main function passes but expected aliases are absent</td></tr>
+      </table>
+    </section>
+
+    <!-- ═══ UNC FILE SYSTEM ═══ -->
+    <section id="unc-fs">
+      <div class="sh"><div class="si i-unc">📁</div><h2>UNC — File System</h2><span class="sbadge" style="background:rgba(232,255,71,.1);color:var(--acc)">UNC</span></div>
+      <p>Executor file system functions operate in a sandboxed directory on the user's local disk.</p>
+      <table class="ft">
+        <tr><th>Function</th><th>Signature</th><th>Description</th><th>Returns</th></tr>
+        <tr><td class="fn-n">writefile</td><td class="fn-s">writefile(path, content)</td><td class="fn-d">Creates or overwrites a file at <em>path</em> with the given string content.</td><td class="fn-r">void</td></tr>
+        <tr><td class="fn-n">readfile</td><td class="fn-s">readfile(path)</td><td class="fn-d">Reads and returns the full content of the file at <em>path</em>.</td><td class="fn-r">string</td></tr>
+        <tr><td class="fn-n">appendfile</td><td class="fn-s">appendfile(path, content)</td><td class="fn-d">Appends string content to an existing file without overwriting it.</td><td class="fn-r">void</td></tr>
+        <tr><td class="fn-n">isfile</td><td class="fn-s">isfile(path)</td><td class="fn-d">Returns <code>true</code> if <em>path</em> is an existing file (not a folder).</td><td class="fn-r">boolean</td></tr>
+        <tr><td class="fn-n">isfolder</td><td class="fn-s">isfolder(path)</td><td class="fn-d">Returns <code>true</code> if <em>path</em> is an existing folder.</td><td class="fn-r">boolean</td></tr>
+        <tr><td class="fn-n">makefolder</td><td class="fn-s">makefolder(path)</td><td class="fn-d">Creates a new folder at the given path.</td><td class="fn-r">void</td></tr>
+        <tr><td class="fn-n">delfolder</td><td class="fn-s">delfolder(path)</td><td class="fn-d">Deletes a folder and all its contents.</td><td class="fn-r">void</td></tr>
+        <tr><td class="fn-n">delfile</td><td class="fn-s">delfile(path)</td><td class="fn-d">Deletes the file at the given path.</td><td class="fn-r">void</td></tr>
+        <tr><td class="fn-n">listfiles</td><td class="fn-s">listfiles(path)</td><td class="fn-d">Returns a list of file/folder paths inside the given directory.</td><td class="fn-r">{string}</td></tr>
+        <tr><td class="fn-n">loadfile</td><td class="fn-s">loadfile(path)</td><td class="fn-d">Loads a Lua file from disk as a callable function. Returns function + error string.</td><td class="fn-r">function?, string?</td></tr>
+        <tr><td class="fn-n">dofile</td><td class="fn-s">dofile(path)</td><td class="fn-d">Loads and immediately executes a Lua file from disk.</td><td class="fn-r">any</td></tr>
+      </table>
+      <div class="cb"><div class="ch"><div class="dots"><i></i><i></i><i></i></div><span>filesystem example</span></div>
+      <pre><code><span class="fn">makefolder</span>(<span class="str">"myscripts"</span>)
+<span class="fn">writefile</span>(<span class="str">"myscripts/config.txt"</span>, <span class="str">"speed=50"</span>)
+<span class="fn">appendfile</span>(<span class="str">"myscripts/config.txt"</span>, <span class="str">"\njump=100"</span>)
+<span class="fn">print</span>(<span class="fn">readfile</span>(<span class="str">"myscripts/config.txt"</span>)) <span class="cmt">-- "speed=50\njump=100"</span>
+<span class="kw">for</span> _, <span class="var">f</span> <span class="kw">in</span> <span class="fn">ipairs</span>(<span class="fn">listfiles</span>(<span class="str">"myscripts"</span>)) <span class="kw">do</span>
+    <span class="fn">print</span>(<span class="fn">isfile</span>(<span class="var">f</span>), <span class="var">f</span>)
+<span class="kw">end</span></code></pre></div>
+    </section>
+
+    <!-- ═══ UNC CRYPTO ═══ -->
+    <section id="unc-crypto">
+      <div class="sh"><div class="si i-unc">🔐</div><h2>UNC — Cryptography</h2><span class="sbadge" style="background:rgba(232,255,71,.1);color:var(--acc)">UNC</span></div>
+      <p>The <code>crypt</code> library provides hashing, AES encryption/decryption, Base64 encoding, and random byte generation.</p>
+      <table class="ft">
+        <tr><th>Function</th><th>Signature</th><th>Description</th><th>Returns</th></tr>
+        <tr><td class="fn-n">crypt.generatekey</td><td class="fn-s">crypt.generatekey()</td><td class="fn-d">Generates a random 32-byte AES key returned as a Base64 string.</td><td class="fn-r">string (b64)</td></tr>
+        <tr><td class="fn-n">crypt.generatebytes</td><td class="fn-s">crypt.generatebytes(n)</td><td class="fn-d">Generates <em>n</em> cryptographically random bytes, returned as Base64.</td><td class="fn-r">string (b64)</td></tr>
+        <tr><td class="fn-n">crypt.encrypt</td><td class="fn-s">crypt.encrypt(data, key, iv?, mode)</td><td class="fn-d">AES-encrypts data. Returns ciphertext and the IV used (auto-generated if nil).</td><td class="fn-r">string, string</td></tr>
+        <tr><td class="fn-n">crypt.decrypt</td><td class="fn-s">crypt.decrypt(data, key, iv, mode)</td><td class="fn-d">AES-decrypts data with the given key, IV, and mode (e.g. "CBC").</td><td class="fn-r">string</td></tr>
+        <tr><td class="fn-n">crypt.hash</td><td class="fn-s">crypt.hash(data, algo)</td><td class="fn-d">Hashes data with the given algorithm. Supported: sha1, sha256, sha384, sha512, md5, sha3-224, sha3-256, sha3-512.</td><td class="fn-r">string (hex)</td></tr>
+        <tr><td class="fn-n">crypt.base64encode</td><td class="fn-s">crypt.base64encode(str)</td><td class="fn-d">Encodes a string to Base64. Aliases: crypt.base64.encode, crypt.base64_encode, base64.encode, base64_encode</td><td class="fn-r">string</td></tr>
+        <tr><td class="fn-n">crypt.base64decode</td><td class="fn-s">crypt.base64decode(b64)</td><td class="fn-d">Decodes a Base64 string. Aliases: crypt.base64.decode, crypt.base64_decode, base64.decode, base64_decode</td><td class="fn-r">string</td></tr>
+      </table>
+      <div class="cb"><div class="ch"><div class="dots"><i></i><i></i><i></i></div><span>crypt example</span></div>
+      <pre><code><span class="kw">local</span> <span class="var">key</span> = <span class="fn">crypt.generatekey</span>()
+<span class="kw">local</span> <span class="var">cipher</span>, <span class="var">iv</span> = <span class="fn">crypt.encrypt</span>(<span class="str">"secret"</span>, <span class="var">key</span>, <span class="kw">nil</span>, <span class="str">"CBC"</span>)
+<span class="kw">local</span> <span class="var">plain</span> = <span class="fn">crypt.decrypt</span>(<span class="var">cipher</span>, <span class="var">key</span>, <span class="var">iv</span>, <span class="str">"CBC"</span>)
+<span class="fn">print</span>(<span class="var">plain</span>) <span class="cmt">-- "secret"</span>
+<span class="fn">print</span>(<span class="fn">crypt.hash</span>(<span class="str">"hello"</span>, <span class="str">"sha256"</span>))
+<span class="fn">print</span>(<span class="fn">crypt.base64encode</span>(<span class="str">"test"</span>)) <span class="cmt">-- "dGVzdA=="</span></code></pre></div>
+    </section>
+
+    <!-- ═══ UNC CACHE ═══ -->
+    <section id="unc-cache">
+      <div class="sh"><div class="si i-unc">🗃️</div><h2>UNC — Cache</h2><span class="sbadge" style="background:rgba(232,255,71,.1);color:var(--acc)">UNC</span></div>
+      <p>The <code>cache</code> library exposes Roblox's internal instance pointer cache for invalidation and replacement.</p>
+      <table class="ft">
+        <tr><th>Function</th><th>Signature</th><th>Description</th><th>Returns</th></tr>
+        <tr><td class="fn-n">cache.invalidate</td><td class="fn-s">cache.invalidate(instance)</td><td class="fn-d">Removes the Instance from the pointer cache. Future lookups return a new reference.</td><td class="fn-r">void</td></tr>
+        <tr><td class="fn-n">cache.iscached</td><td class="fn-s">cache.iscached(instance)</td><td class="fn-d">Returns true if the Instance is currently in the pointer cache.</td><td class="fn-r">boolean</td></tr>
+        <tr><td class="fn-n">cache.replace</td><td class="fn-s">cache.replace(obj, newObj)</td><td class="fn-d">Replaces a cached pointer so lookups of <em>obj</em> now return <em>newObj</em>.</td><td class="fn-r">void</td></tr>
+      </table>
+    </section>
+
+    <!-- ═══ UNC DEBUG ═══ -->
+    <section id="unc-debug">
+      <div class="sh"><div class="si i-unc">🐛</div><h2>UNC — Debug Library</h2><span class="sbadge" style="background:rgba(232,255,71,.1);color:var(--acc)">UNC</span></div>
+      <p>Extended <code>debug</code> functions for introspecting Luau closures — reading/writing constants, upvalues, stack frames, and inner protos.</p>
+      <table class="ft">
+        <tr><th>Function</th><th>Signature</th><th>Description</th><th>Returns</th></tr>
+        <tr><td class="fn-n">debug.getconstant</td><td class="fn-s">debug.getconstant(fn, idx)</td><td class="fn-d">Returns the constant at index <em>idx</em> in the function's constant table.</td><td class="fn-r">any</td></tr>
+        <tr><td class="fn-n">debug.getconstants</td><td class="fn-s">debug.getconstants(fn)</td><td class="fn-d">Returns a table of ALL constants in the function.</td><td class="fn-r">table</td></tr>
+        <tr><td class="fn-n">debug.setconstant</td><td class="fn-s">debug.setconstant(fn, idx, val)</td><td class="fn-d">Overwrites the constant at index <em>idx</em> in the function.</td><td class="fn-r">void</td></tr>
+        <tr><td class="fn-n">debug.getupvalue</td><td class="fn-s">debug.getupvalue(fn, idx)</td><td class="fn-d">Returns the upvalue at index <em>idx</em> for the given function.</td><td class="fn-r">any</td></tr>
+        <tr><td class="fn-n">debug.getupvalues</td><td class="fn-s">debug.getupvalues(fn)</td><td class="fn-d">Returns a table of ALL upvalues for the given function.</td><td class="fn-r">table</td></tr>
+        <tr><td class="fn-n">debug.setupvalue</td><td class="fn-s">debug.setupvalue(fn, idx, val)</td><td class="fn-d">Sets the upvalue at index <em>idx</em> in the function to <em>val</em>.</td><td class="fn-r">void</td></tr>
+        <tr><td class="fn-n">debug.getproto</td><td class="fn-s">debug.getproto(fn, idx, activated?)</td><td class="fn-d">Returns the inner proto function at index <em>idx</em> inside <em>fn</em>. Pass true for an activated copy that can return values.</td><td class="fn-r">function</td></tr>
+        <tr><td class="fn-n">debug.getprotos</td><td class="fn-s">debug.getprotos(fn)</td><td class="fn-d">Returns a table of all inner proto functions defined inside <em>fn</em>.</td><td class="fn-r">table</td></tr>
+        <tr><td class="fn-n">debug.getstack</td><td class="fn-s">debug.getstack(level, idx?)</td><td class="fn-d">Returns the stack value at <em>level</em> and optional slot <em>idx</em>. Returns full table if no idx given.</td><td class="fn-r">any / table</td></tr>
+        <tr><td class="fn-n">debug.setstack</td><td class="fn-s">debug.setstack(level, idx, val)</td><td class="fn-d">Overwrites the stack slot at <em>level</em>/<em>idx</em> with <em>val</em>.</td><td class="fn-r">void</td></tr>
+        <tr><td class="fn-n">debug.getinfo</td><td class="fn-s">debug.getinfo(fn)</td><td class="fn-d">Returns an info table: source, short_src, func, what, currentline, name, nups, numparams, is_vararg.</td><td class="fn-r">table</td></tr>
+      </table>
+    </section>
+
+    <!-- ═══ UNC DRAWING ═══ -->
+    <section id="unc-drawing">
+      <div class="sh"><div class="si i-unc">🖊️</div><h2>UNC — Drawing API</h2><span class="sbadge" style="background:rgba(232,255,71,.1);color:var(--acc)">UNC</span></div>
+      <p>The <strong>Drawing API</strong> renders 2D shapes and text directly onto the screen overlay, bypassing Roblox's GUI. Used for ESP, aimbot indicators, and HUDs.</p>
+      <table class="ft">
+        <tr><th>Function</th><th>Description</th><th>Returns</th></tr>
+        <tr><td class="fn-n">Drawing.new(type)</td><td class="fn-d">Creates a drawing object. Types: "Square", "Circle", "Line", "Text", "Image", "Triangle", "Quad".</td><td class="fn-r">DrawingObj</td></tr>
+        <tr><td class="fn-n">Drawing.Fonts</td><td class="fn-d">Font ID table: UI=0, System=1, Plex=2, Monospace=3.</td><td class="fn-r">table</td></tr>
+        <tr><td class="fn-n">Drawing.clear()</td><td class="fn-d">Destroys all active drawing objects. <span class="opt">optional</span></td><td class="fn-r">void</td></tr>
+        <tr><td class="fn-n">cleardrawcache()</td><td class="fn-d">Clears the internal draw cache. Global function.</td><td class="fn-r">void</td></tr>
+        <tr><td class="fn-n">isrenderobj(obj)</td><td class="fn-d">Returns true if <em>obj</em> is an active Drawing render object.</td><td class="fn-r">boolean</td></tr>
+        <tr><td class="fn-n">obj:Destroy()</td><td class="fn-d">Destroys a drawing object and removes it from the overlay.</td><td class="fn-r">void</td></tr>
+      </table>
+      <h4>Drawing Object Common Properties</h4>
+      <table class="ct">
+        <tr><th>Property</th><th>Type</th><th>Description</th></tr>
+        <tr><td>Visible</td><td>boolean</td><td>Whether the object renders</td></tr>
+        <tr><td>Color</td><td>Color3</td><td>Fill or stroke color</td></tr>
+        <tr><td>Transparency</td><td>number 0–1</td><td>Opacity (0=opaque, 1=invisible)</td></tr>
+        <tr><td>Position</td><td>Vector2</td><td>Screen position in pixels</td></tr>
+        <tr><td>Size</td><td>Vector2 / number</td><td>Width/height or radius</td></tr>
+        <tr><td>ZIndex</td><td>number</td><td>Render order (higher = on top)</td></tr>
+        <tr><td>Filled</td><td>boolean</td><td>Fill shape (Square, Circle)</td></tr>
+        <tr><td>Thickness</td><td>number</td><td>Stroke thickness</td></tr>
+        <tr><td>Text</td><td>string</td><td>Content (Text type only)</td></tr>
+        <tr><td>Font</td><td>Drawing.Fonts.*</td><td>Font ID (Text type only)</td></tr>
+      </table>
+      <div class="cb"><div class="ch"><div class="dots"><i></i><i></i><i></i></div><span>drawing example · ESP box + label</span></div>
+      <pre><code><span class="kw">local</span> <span class="var">box</span> = Drawing.<span class="fn">new</span>(<span class="str">"Square"</span>)
+<span class="var">box</span>.Visible = <span class="kw">true</span>
+<span class="var">box</span>.Color = Color3.fromRGB(<span class="num">255</span>, <span class="num">0</span>, <span class="num">0</span>)
+<span class="var">box</span>.Position = Vector2.<span class="fn">new</span>(<span class="num">100</span>, <span class="num">100</span>)
+<span class="var">box</span>.Size = Vector2.<span class="fn">new</span>(<span class="num">60</span>, <span class="num">120</span>)
+<span class="var">box</span>.Filled = <span class="kw">false</span>
+<span class="var">box</span>.Thickness = <span class="num">2</span>
+
+<span class="kw">local</span> <span class="var">label</span> = Drawing.<span class="fn">new</span>(<span class="str">"Text"</span>)
+<span class="var">label</span>.Text = <span class="str">"Player"</span>
+<span class="var">label</span>.Font = Drawing.Fonts.UI
+<span class="var">label</span>.Size = <span class="num">14</span>
+<span class="var">label</span>.Position = Vector2.<span class="fn">new</span>(<span class="num">100</span>, <span class="num">85</span>)
+<span class="var">label</span>.Visible = <span class="kw">true</span></code></pre></div>
+    </section>
+
+    <!-- ═══ UNC INSTANCE ═══ -->
+    <section id="unc-instance">
+      <div class="sh"><div class="si i-unc">🧱</div><h2>UNC — Instance / Game Functions</h2><span class="sbadge" style="background:rgba(232,255,71,.1);color:var(--acc)">UNC</span></div>
+      <table class="ft">
+        <tr><th>Function</th><th>Signature</th><th>Description</th><th>Returns</th></tr>
+        <tr><td class="fn-n">cloneref</td><td class="fn-s">cloneref(inst)</td><td class="fn-d">Returns a new reference to the same Instance that is pointer-unequal. Mutations via clone affect the original.</td><td class="fn-r">Instance</td></tr>
+        <tr><td class="fn-n">compareinstances</td><td class="fn-s">compareinstances(a, b)</td><td class="fn-d">Returns true if both references point to the same underlying Instance (even if pointers differ).</td><td class="fn-r">boolean</td></tr>
+        <tr><td class="fn-n">fireclickdetector</td><td class="fn-s">fireclickdetector(det, dist?, event?)</td><td class="fn-d">Fires a ClickDetector event (MouseClick, MouseHoverEnter, etc.) as if clicked by the player.</td><td class="fn-r">void</td></tr>
+        <tr><td class="fn-n">fireproximityprompt</td><td class="fn-s">fireproximityprompt(prompt)</td><td class="fn-d">Triggers a ProximityPrompt.Triggered regardless of distance or line-of-sight.</td><td class="fn-r">void</td></tr>
+        <tr><td class="fn-n">firetouchinterest</td><td class="fn-s">firetouchinterest(part, target, state)</td><td class="fn-d">Fires a Touched/TouchEnded event between two parts. state: 0=touch, 1=untouch.</td><td class="fn-r">void</td></tr>
+        <tr><td class="fn-n">firesignal</td><td class="fn-s">firesignal(signal, ...)</td><td class="fn-d">Fires an RBXScriptSignal with the given arguments, invoking all connected handlers.</td><td class="fn-r">void</td></tr>
+        <tr><td class="fn-n">getcallbackvalue</td><td class="fn-s">getcallbackvalue(inst, prop)</td><td class="fn-d">Returns the function assigned to a callback property such as BindableFunction.OnInvoke.</td><td class="fn-r">function?</td></tr>
+        <tr><td class="fn-n">getconnections</td><td class="fn-s">getconnections(signal)</td><td class="fn-d">Returns all connections on an RBXScriptSignal. Each has: Enabled, ForeignState, LuaConnection, Function, Thread, Fire, Defer, Disconnect, Disable, Enable.</td><td class="fn-r">table</td></tr>
+        <tr><td class="fn-n">getcustomasset</td><td class="fn-s">getcustomasset(path)</td><td class="fn-d">Returns an rbxasset:// URL pointing to a local file, usable as a Roblox content ID.</td><td class="fn-r">string</td></tr>
+        <tr><td class="fn-n">gethiddenproperty</td><td class="fn-s">gethiddenproperty(inst, prop)</td><td class="fn-d">Returns the value and hidden-status of a non-scriptable property.</td><td class="fn-r">any, boolean</td></tr>
+        <tr><td class="fn-n">sethiddenproperty</td><td class="fn-s">sethiddenproperty(inst, prop, val)</td><td class="fn-d">Sets a non-scriptable (hidden) property. Returns true if property was hidden.</td><td class="fn-r">boolean</td></tr>
+        <tr><td class="fn-n">isscriptable</td><td class="fn-s">isscriptable(inst, prop)</td><td class="fn-d">Returns true if <em>prop</em> is currently scriptable on <em>inst</em>.</td><td class="fn-r">boolean</td></tr>
+        <tr><td class="fn-n">setscriptable</td><td class="fn-s">setscriptable(inst, prop, bool)</td><td class="fn-d">Toggles scriptability of <em>prop</em> on <em>inst</em>. Returns previous state.</td><td class="fn-r">boolean</td></tr>
+        <tr><td class="fn-n">gethui</td><td class="fn-s">gethui()</td><td class="fn-d">Returns the executor's hidden UI container Instance, separate from PlayerGui.</td><td class="fn-r">Instance</td></tr>
+        <tr><td class="fn-n">getinstances</td><td class="fn-s">getinstances()</td><td class="fn-d">Returns ALL Instances known to the client, including nil-parented ones.</td><td class="fn-r">{Instance}</td></tr>
+        <tr><td class="fn-n">getnilinstances</td><td class="fn-s">getnilinstances()</td><td class="fn-d">Returns Instances whose parent is nil (removed but still in memory).</td><td class="fn-r">{Instance}</td></tr>
+        <tr><td class="fn-n">getloadedmodules</td><td class="fn-s">getloadedmodules()</td><td class="fn-d">Returns all ModuleScripts currently cached by the Luau VM.</td><td class="fn-r">{ModuleScript}</td></tr>
+        <tr><td class="fn-n">getrunningscripts</td><td class="fn-s">getrunningscripts()</td><td class="fn-d">Returns all LocalScripts and ModuleScripts currently executing.</td><td class="fn-r">{Instance}</td></tr>
+        <tr><td class="fn-n">getscripts</td><td class="fn-s">getscripts()</td><td class="fn-d">Returns all known scripts (LocalScript + ModuleScript) in the game.</td><td class="fn-r">{Instance}</td></tr>
+        <tr><td class="fn-n">getscriptbytecode</td><td class="fn-s">getscriptbytecode(script)</td><td class="fn-d">Returns the compiled Luau bytecode of a script. Alias: dumpstring</td><td class="fn-r">string</td></tr>
+        <tr><td class="fn-n">getscripthash</td><td class="fn-s">getscripthash(script)</td><td class="fn-d">Returns a hash of the script's source content. Changes when source changes.</td><td class="fn-r">string</td></tr>
+        <tr><td class="fn-n">getsenv</td><td class="fn-s">getsenv(script)</td><td class="fn-d">Returns the environment table of a running script, including its script global.</td><td class="fn-r">table</td></tr>
+        <tr><td class="fn-n">require</td><td class="fn-s">require(module)</td><td class="fn-d">Extended require that can load any ModuleScript including character/PlayerScripts ones.</td><td class="fn-r">any</td></tr>
+        <tr><td class="fn-n">getactors</td><td class="fn-s">getactors()</td><td class="fn-d">Returns all initialized Actor instances. <span class="opt">optional</span></td><td class="fn-r">{Actor}</td></tr>
+        <tr><td class="fn-n">getscriptclosure</td><td class="fn-s">getscriptclosure(script)</td><td class="fn-d">Returns the main closure function of a script Instance. <span class="opt">optional</span></td><td class="fn-r">function</td></tr>
+        <tr><td class="fn-n">isnetworkowner</td><td class="fn-s">isnetworkowner(part)</td><td class="fn-d">Returns true if the local client is network owner of the part. <span class="opt">optional</span></td><td class="fn-r">boolean</td></tr>
+      </table>
+    </section>
+
+    <!-- ═══ UNC CLOSURES ═══ -->
+    <section id="unc-closures">
+      <div class="sh"><div class="si i-unc">⚡</div><h2>UNC — Closures &amp; Hooks</h2><span class="sbadge" style="background:rgba(232,255,71,.1);color:var(--acc)">UNC</span></div>
+      <table class="ft">
+        <tr><th>Function</th><th>Signature</th><th>Description</th><th>Returns</th></tr>
+        <tr><td class="fn-n">hookfunction</td><td class="fn-s">hookfunction(fn, hook)</td><td class="fn-d">Replaces <em>fn</em> globally with <em>hook</em>. Returns original. Alias: hookfunc</td><td class="fn-r">function</td></tr>
+        <tr><td class="fn-n">hookmetamethod</td><td class="fn-s">hookmetamethod(obj, mm, hook)</td><td class="fn-d">Hooks a metamethod (e.g. "__namecall") on obj's metatable. Returns original.</td><td class="fn-r">function</td></tr>
+        <tr><td class="fn-n">clonefunction</td><td class="fn-s">clonefunction(fn)</td><td class="fn-d">Creates an independent copy of a closure. Does NOT inherit hooks applied to original.</td><td class="fn-r">function</td></tr>
+        <tr><td class="fn-n">newcclosure</td><td class="fn-s">newcclosure(fn)</td><td class="fn-d">Wraps a Luau function in a C closure. iscclosure() returns true for the result.</td><td class="fn-r">function</td></tr>
+        <tr><td class="fn-n">iscclosure</td><td class="fn-s">iscclosure(fn)</td><td class="fn-d">Returns true if fn is a C closure (e.g. built-ins like print).</td><td class="fn-r">boolean</td></tr>
+        <tr><td class="fn-n">islclosure</td><td class="fn-s">islclosure(fn)</td><td class="fn-d">Returns true if fn is a Luau (Lua) closure.</td><td class="fn-r">boolean</td></tr>
+        <tr><td class="fn-n">isexecutorclosure</td><td class="fn-s">isexecutorclosure(fn)</td><td class="fn-d">Returns true if fn was defined in the executor environment. Aliases: checkclosure, isourclosure</td><td class="fn-r">boolean</td></tr>
+        <tr><td class="fn-n">checkcaller</td><td class="fn-s">checkcaller()</td><td class="fn-d">Returns true if the call stack originates from the executor's main thread.</td><td class="fn-r">boolean</td></tr>
+        <tr><td class="fn-n">getcallingscript</td><td class="fn-s">getcallingscript()</td><td class="fn-d">Returns the script Instance that invoked the current function, or nil. <span class="opt">optional</span></td><td class="fn-r">Instance?</td></tr>
+        <tr><td class="fn-n">getnamecallmethod</td><td class="fn-s">getnamecallmethod()</td><td class="fn-d">Inside a __namecall hook, returns the method name being called (e.g. "GetService").</td><td class="fn-r">string</td></tr>
+        <tr><td class="fn-n">restorefunction</td><td class="fn-s">restorefunction(fn)</td><td class="fn-d">Removes all hooks from <em>fn</em>, restoring original behavior. <span class="opt">optional</span></td><td class="fn-r">void</td></tr>
+        <tr><td class="fn-n">replaceclosure</td><td class="fn-s">replaceclosure(fn, new)</td><td class="fn-d">Replaces fn's internal closure body. <span class="opt">optional</span></td><td class="fn-r">function?</td></tr>
+        <tr><td class="fn-n">cloneclosure</td><td class="fn-s">cloneclosure(fn)</td><td class="fn-d">Creates a copy of fn sharing the same upvalue environment. <span class="opt">optional</span></td><td class="fn-r">function</td></tr>
+        <tr><td class="fn-n">getfunctionhash</td><td class="fn-s">getfunctionhash(fn)</td><td class="fn-d">Returns a 96-character SHA-384 hex digest of the function's bytecode. <span class="opt">optional</span></td><td class="fn-r">string</td></tr>
+        <tr><td class="fn-n">setnamecallmethod</td><td class="fn-s">setnamecallmethod(name)</td><td class="fn-d">Changes the active namecall method string inside a __namecall hook. <span class="opt">optional</span></td><td class="fn-r">void</td></tr>
+      </table>
+      <div class="cb"><div class="ch"><div class="dots"><i></i><i></i><i></i></div><span>hookfunction + hookmetamethod example</span></div>
+      <pre><code><span class="cmt">-- Hook a function</span>
+<span class="kw">local</span> <span class="var">oldWarn</span>
+<span class="var">oldWarn</span> = <span class="fn">hookfunction</span>(warn, <span class="kw">function</span>(...)
+    <span class="fn">print</span>(<span class="str">"[intercepted]"</span>, ...)
+    <span class="kw">return</span> <span class="var">oldWarn</span>(...)
+<span class="kw">end</span>)
+
+<span class="cmt">-- Hook __namecall to spy on :GetService()</span>
+<span class="kw">local</span> <span class="var">oldNC</span>
+<span class="var">oldNC</span> = <span class="fn">hookmetamethod</span>(game, <span class="str">"__namecall"</span>, <span class="kw">function</span>(<span class="var">self</span>, ...)
+    <span class="kw">if</span> <span class="fn">getnamecallmethod</span>() == <span class="str">"GetService"</span> <span class="kw">then</span>
+        <span class="fn">print</span>(<span class="str">"GetService called with:"</span>, ...)
+    <span class="kw">end</span>
+    <span class="kw">return</span> <span class="var">oldNC</span>(<span class="var">self</span>, ...)
+<span class="kw">end</span>)</code></pre></div>
+    </section>
+
+    <!-- ═══ UNC ENVIRONMENT ═══ -->
+    <section id="unc-env">
+      <div class="sh"><div class="si i-unc">🌍</div><h2>UNC — Environment, Identity &amp; Misc</h2><span class="sbadge" style="background:rgba(232,255,71,.1);color:var(--acc)">UNC</span></div>
+      <table class="ft">
+        <tr><th>Function</th><th>Signature</th><th>Description</th><th>Returns</th></tr>
+        <tr><td class="fn-n">getgenv</td><td class="fn-s">getgenv()</td><td class="fn-d">Returns the executor's global environment. Variables set here persist across all executor scripts.</td><td class="fn-r">table</td></tr>
+        <tr><td class="fn-n">getrenv</td><td class="fn-s">getrenv()</td><td class="fn-d">Returns the Roblox game's global environment (different from getgenv).</td><td class="fn-r">table</td></tr>
+        <tr><td class="fn-n">getgc</td><td class="fn-s">getgc()</td><td class="fn-d">Returns all values currently tracked by the Luau garbage collector.</td><td class="fn-r">table</td></tr>
+        <tr><td class="fn-n">getregistry</td><td class="fn-s">getregistry()</td><td class="fn-d">Returns the raw Lua registry table. Alias: getreg</td><td class="fn-r">table</td></tr>
+        <tr><td class="fn-n">getrawmetatable</td><td class="fn-s">getrawmetatable(obj)</td><td class="fn-d">Returns the true metatable of obj, bypassing __metatable protection.</td><td class="fn-r">table</td></tr>
+        <tr><td class="fn-n">setrawmetatable</td><td class="fn-s">setrawmetatable(obj, mt)</td><td class="fn-d">Sets the metatable directly, bypassing __metatable protection.</td><td class="fn-r">obj</td></tr>
+        <tr><td class="fn-n">isreadonly</td><td class="fn-s">isreadonly(t)</td><td class="fn-d">Returns true if table t is frozen/read-only.</td><td class="fn-r">boolean</td></tr>
+        <tr><td class="fn-n">setreadonly</td><td class="fn-s">setreadonly(t, bool)</td><td class="fn-d">Enables or disables the read-only/frozen state of table t.</td><td class="fn-r">void</td></tr>
+        <tr><td class="fn-n">getthreadidentity</td><td class="fn-s">getthreadidentity()</td><td class="fn-d">Returns the current thread's identity level (2–8). Aliases: getidentity, getthreadcontext</td><td class="fn-r">number</td></tr>
+        <tr><td class="fn-n">setthreadidentity</td><td class="fn-s">setthreadidentity(n)</td><td class="fn-d">Sets the current thread's identity level. Aliases: setidentity, setthreadcontext</td><td class="fn-r">void</td></tr>
+        <tr><td class="fn-n">identifyexecutor</td><td class="fn-s">identifyexecutor()</td><td class="fn-d">Returns executor name and version strings. Alias: getexecutorname</td><td class="fn-r">string, string</td></tr>
+        <tr><td class="fn-n">loadstring</td><td class="fn-s">loadstring(code, name?)</td><td class="fn-d">Compiles and returns a Lua source string as a function. Rejects raw Luau bytecode.</td><td class="fn-r">function?, string?</td></tr>
+        <tr><td class="fn-n">isrbxactive</td><td class="fn-s">isrbxactive()</td><td class="fn-d">Returns true if the Roblox window is currently focused. Alias: isgameactive</td><td class="fn-r">boolean</td></tr>
+        <tr><td class="fn-n">lz4compress</td><td class="fn-s">lz4compress(data)</td><td class="fn-d">Compresses a string using LZ4 compression.</td><td class="fn-r">string</td></tr>
+        <tr><td class="fn-n">lz4decompress</td><td class="fn-s">lz4decompress(data, size)</td><td class="fn-d">Decompresses LZ4 data. <em>size</em> is the original uncompressed byte count.</td><td class="fn-r">string</td></tr>
+        <tr><td class="fn-n">queue_on_teleport</td><td class="fn-s">queue_on_teleport(code)</td><td class="fn-d">Queues a script string to execute after player teleports. Alias: queueonteleport</td><td class="fn-r">void</td></tr>
+        <tr><td class="fn-n">setclipboard</td><td class="fn-s">setclipboard(text)</td><td class="fn-d">Copies text to the system clipboard. Alias: toclipboard</td><td class="fn-r">void</td></tr>
+        <tr><td class="fn-n">getclipboard</td><td class="fn-s">getclipboard()</td><td class="fn-d">Returns current system clipboard text, or nil. <span class="opt">optional</span></td><td class="fn-r">string?</td></tr>
+        <tr><td class="fn-n">setfpscap</td><td class="fn-s">setfpscap(fps)</td><td class="fn-d">Sets the FPS cap. Pass 0 for uncapped.</td><td class="fn-r">void</td></tr>
+        <tr><td class="fn-n">messagebox</td><td class="fn-s">messagebox(text, title, type)</td><td class="fn-d">Displays a Win32 dialog box and returns the button pressed. <span class="opt">optional</span></td><td class="fn-r">number?</td></tr>
+        <tr><td class="fn-n">saveinstance</td><td class="fn-s">saveinstance(opts?)</td><td class="fn-d">Saves the game to a .rbxl file. Alias: save_instance <span class="opt">optional</span></td><td class="fn-r">void</td></tr>
+        <tr><td class="fn-n">gethwid</td><td class="fn-s">gethwid()</td><td class="fn-d">Returns a hardware identifier string for the machine. <span class="opt">optional</span></td><td class="fn-r">string</td></tr>
+        <tr><td class="fn-n">getfflag</td><td class="fn-s">getfflag(name)</td><td class="fn-d">Returns value of a Roblox FFlag by full or short name. <span class="opt">optional</span></td><td class="fn-r">any</td></tr>
+        <tr><td class="fn-n">getobjects</td><td class="fn-s">getobjects(assetId)</td><td class="fn-d">Loads an rbxassetid and returns its instances. <span class="opt">optional</span></td><td class="fn-r">table</td></tr>
+      </table>
+    </section>
+
+    <!-- ═══ UNC MOUSE ═══ -->
+    <section id="unc-mouse">
+      <div class="sh"><div class="si i-unc">🖱️</div><h2>UNC — Mouse &amp; Input Simulation</h2><span class="sbadge" style="background:rgba(232,255,71,.1);color:var(--acc)">UNC</span></div>
+      <p>These functions simulate mouse input at the OS level, bypassing Roblox's input system entirely.</p>
+      <table class="ft">
+        <tr><th>Function</th><th>Signature</th><th>Description</th></tr>
+        <tr><td class="fn-n">mouse1click</td><td class="fn-s">mouse1click()</td><td class="fn-d">Simulates a full left mouse click (press + release).</td></tr>
+        <tr><td class="fn-n">mouse1press</td><td class="fn-s">mouse1press()</td><td class="fn-d">Simulates pressing the left mouse button down.</td></tr>
+        <tr><td class="fn-n">mouse1release</td><td class="fn-s">mouse1release()</td><td class="fn-d">Simulates releasing the left mouse button.</td></tr>
+        <tr><td class="fn-n">mouse2click</td><td class="fn-s">mouse2click()</td><td class="fn-d">Simulates a full right mouse click.</td></tr>
+        <tr><td class="fn-n">mouse2press</td><td class="fn-s">mouse2press()</td><td class="fn-d">Simulates pressing the right mouse button.</td></tr>
+        <tr><td class="fn-n">mouse2release</td><td class="fn-s">mouse2release()</td><td class="fn-d">Simulates releasing the right mouse button.</td></tr>
+        <tr><td class="fn-n">mousemoveabs</td><td class="fn-s">mousemoveabs(x, y)</td><td class="fn-d">Moves the cursor to absolute screen coordinates (x, y).</td></tr>
+        <tr><td class="fn-n">mousemoverel</td><td class="fn-s">mousemoverel(dx, dy)</td><td class="fn-d">Moves the cursor relative to current position by (dx, dy) pixels.</td></tr>
+        <tr><td class="fn-n">mousescroll</td><td class="fn-s">mousescroll(delta)</td><td class="fn-d">Simulates mouse scroll. Positive = up, negative = down.</td></tr>
+      </table>
+    </section>
+
+    <!-- ═══ UNC CONSOLE ═══ -->
+    <section id="unc-console">
+      <div class="sh"><div class="si i-unc">🖥️</div><h2>UNC — rconsole (Custom Console)</h2><span class="sbadge" style="background:rgba(232,255,71,.1);color:var(--acc)">UNC</span></div>
+      <div class="co warn"><span class="ci">⚠️</span><div>Some executors may crash when rconsole functions are called. The UNC test prompts before running these tests.</div></div>
+      <table class="ft">
+        <tr><th>Function</th><th>Aliases</th><th>Description</th></tr>
+        <tr><td class="fn-n">rconsolecreate</td><td class="fn-a">consolecreate</td><td class="fn-d">Opens a custom console window with an optional title.</td></tr>
+        <tr><td class="fn-n">rconsoledestroy</td><td class="fn-a">consoledestroy</td><td class="fn-d">Closes and destroys the custom console window.</td></tr>
+        <tr><td class="fn-n">rconsolesettitle</td><td class="fn-a">rconsolename, consolesettitle</td><td class="fn-d">Sets the title caption of the custom console window.</td></tr>
+        <tr><td class="fn-n">rconsoleprint</td><td class="fn-a">consoleprint</td><td class="fn-d">Prints text to the custom console.</td></tr>
+        <tr><td class="fn-n">rconsolewarn</td><td class="fn-a">consolewarn</td><td class="fn-d">Prints warning-colored text to the console. <span class="opt">optional</span></td></tr>
+        <tr><td class="fn-n">rconsoleerr</td><td class="fn-a">consoleerr</td><td class="fn-d">Prints error-colored text to the console. <span class="opt">optional</span></td></tr>
+        <tr><td class="fn-n">rconsoleclear</td><td class="fn-a">consoleclear</td><td class="fn-d">Clears all text currently in the console.</td></tr>
+        <tr><td class="fn-n">rconsoleinput</td><td class="fn-a">consoleinput</td><td class="fn-d">Yields and returns user input from the console. <span class="opt">optional</span></td></tr>
+      </table>
+    </section>
+
+    <!-- ═══ UNC NETWORK ═══ -->
+    <section id="unc-network">
+      <div class="sh"><div class="si i-unc">🌐</div><h2>UNC — Network &amp; HTTP</h2><span class="sbadge" style="background:rgba(232,255,71,.1);color:var(--acc)">UNC</span></div>
+      <p>The <code>request</code> function and <code>WebSocket</code> library let executors make HTTP requests and open WebSocket connections outside Roblox's HttpService restrictions.</p>
+      <table class="ft">
+        <tr><th>Function</th><th>Aliases</th><th>Description</th><th>Returns</th></tr>
+        <tr><td class="fn-n">request</td><td class="fn-a">http.request, http_request</td><td class="fn-d">Full HTTP request. Takes a table: Url, Method, Headers, Body. Returns: Success, StatusCode, StatusMessage, Headers, Body.</td><td class="fn-r">table</td></tr>
+        <tr><td class="fn-n">http.get</td><td class="fn-a">—</td><td class="fn-d">Shorthand GET request. Returns body string or response table. <span class="opt">optional</span></td><td class="fn-r">string/table</td></tr>
+        <tr><td class="fn-n">http.post</td><td class="fn-a">—</td><td class="fn-d">Shorthand POST. Takes url, body, content-type. <span class="opt">optional</span></td><td class="fn-r">string/table</td></tr>
+        <tr><td class="fn-n">WebSocket.connect</td><td class="fn-a">—</td><td class="fn-d">Connects to a WebSocket URL (ws:// or wss://). Returns a WebSocket object with Send, Close, OnMessage, and OnClose members.</td><td class="fn-r">WebSocket</td></tr>
+      </table>
+      <h4>WebSocket Object Members</h4>
+      <table class="ct">
+        <tr><th>Member</th><th>Type</th><th>Description</th></tr>
+        <tr><td>ws:Send(msg)</td><td>method</td><td>Sends a string message over the open connection.</td></tr>
+        <tr><td>ws:Close()</td><td>method</td><td>Closes the WebSocket connection gracefully.</td></tr>
+        <tr><td>ws.OnMessage</td><td>RBXScriptSignal</td><td>Fires with (message: string) when data is received from the server.</td></tr>
+        <tr><td>ws.OnClose</td><td>RBXScriptSignal</td><td>Fires when the connection is closed by either side.</td></tr>
+      </table>
+      <div class="cb"><div class="ch"><div class="dots"><i></i><i></i><i></i></div><span>request example</span></div>
+      <pre><code><span class="kw">local</span> <span class="var">res</span> = <span class="fn">request</span>({
+    Url    = <span class="str">"https://httpbin.org/post"</span>,
+    Method = <span class="str">"POST"</span>,
+    Headers = { [<span class="str">"Content-Type"</span>] = <span class="str">"application/json"</span> },
+    Body   = <span class="str">'{"key":"value"}'</span>,
+})
+<span class="fn">print</span>(<span class="var">res</span>.StatusCode, <span class="var">res</span>.Body)</code></pre></div>
+      <div class="cb"><div class="ch"><div class="dots"><i></i><i></i><i></i></div><span>WebSocket example</span></div>
+      <pre><code><span class="kw">local</span> <span class="var">ws</span> = WebSocket.<span class="fn">connect</span>(<span class="str">"wss://ws.postman-echo.com/raw"</span>)
+
+<span class="var">ws</span>.OnMessage:<span class="fn">Connect</span>(<span class="kw">function</span>(<span class="var">msg</span>)
+    <span class="fn">print</span>(<span class="str">"Server:"</span>, <span class="var">msg</span>)
+<span class="kw">end</span>)
+
+<span class="var">ws</span>.OnClose:<span class="fn">Connect</span>(<span class="kw">function</span>()
+    <span class="fn">print</span>(<span class="str">"WebSocket closed"</span>)
+<span class="kw">end</span>)
+
+<span class="var">ws</span>:<span class="fn">Send</span>(<span class="str">"Hello from executor!"</span>)
+task.<span class="fn">wait</span>(<span class="num">1</span>)
+<span class="var">ws</span>:<span class="fn">Close</span>()</code></pre></div>
+    </section>
+
+    <hr/>
+
+    <!-- ═══════════════ sUNC ═══════════════ -->
+    <section id="sunc">
+      <div class="sh"><div class="si i-sunc">⚡</div><h2>sUNC — senS' Unified Naming Convention</h2><span class="sbadge" style="background:rgba(71,209,255,.1);color:var(--acc2)">sUNC</span></div>
+      <p><strong>sUNC</strong> is a community-maintained fork and evolution of UNC by <em>senS</em>. While it builds on the same executor API concept, sUNC has diverged substantially — removing some UNC functions it considers unreliable, tightening test criteria, and adding entirely new categories like <code>filtergc</code>, <code>replicatesignal</code>, Drawing property accessors, and explicit Encoding functions.</p>
+      <div class="co info"><span class="ci">ℹ️</span><div>sUNC only tests functions it actively maintains. Functions not listed in sUNC docs are outside its standard — even if they appear in classic UNC.</div></div>
+      <div class="co tip"><span class="ci">💡</span><div>Run the sUNC test script: <code>loadstring(game:HttpGet("https://script.sunc.su/"))()</code>. As of v2.0 this only runs inside the official sUNC testing game on Roblox.</div></div>
+      <h3>Key Differences from UNC</h3>
+      <table class="ct">
+        <tr><th>Area</th><th>UNC</th><th>sUNC</th></tr>
+        <tr><td>Base64</td><td>crypt.base64encode / crypt.base64decode</td><td class="yes">Standalone base64encode / base64decode functions</td></tr>
+        <tr><td>LZ4</td><td>lz4compress / lz4decompress in env</td><td class="yes">Explicit Encoding category</td></tr>
+        <tr><td>GC filtering</td><td class="no">getgc() only (no filter)</td><td class="yes">filtergc() with rich type/value options</td></tr>
+        <tr><td>Signal replication</td><td class="no">Not tested</td><td class="yes">replicatesignal() tested</td></tr>
+        <tr><td>Drawing props</td><td class="no">Direct property access only</td><td class="yes">getrenderproperty / setrenderproperty</td></tr>
+        <tr><td>Script closures</td><td class="part">Optional</td><td class="yes">getscriptclosure tested as core</td></tr>
+        <tr><td>loadstring</td><td>Under Environment</td><td class="yes">Under both Closures and Scripts</td></tr>
+        <tr><td>rconsole</td><td class="yes">Tested</td><td class="no">Not part of sUNC standard</td></tr>
+        <tr><td>Mouse simulation</td><td class="yes">Tested</td><td class="no">Not part of sUNC standard</td></tr>
+      </table>
+    </section>
+
+    <!-- ═══ sUNC CLOSURES ═══ -->
+    <section id="sunc-closures">
+      <div class="sh"><div class="si i-sunc">🔗</div><h2>sUNC — Closures</h2><span class="sbadge" style="background:rgba(71,209,255,.1);color:var(--acc2)">sUNC</span></div>
+      <table class="ft">
+        <tr><th>Function</th><th>Signature</th><th>Description</th><th>Returns</th></tr>
+        <tr><td class="fn-n">checkcaller</td><td class="fn-s">checkcaller()</td><td class="fn-d">Returns true if the current call originates from the executor thread.</td><td class="fn-r">boolean</td></tr>
+        <tr><td class="fn-n">clonefunction</td><td class="fn-s">clonefunction(fn)</td><td class="fn-d">Returns an independent copy of a Luau closure. Hooks on the original do not affect the clone.</td><td class="fn-r">function</td></tr>
+        <tr><td class="fn-n">getfunctionhash</td><td class="fn-s">getfunctionhash(fn)</td><td class="fn-d">Returns a SHA-384 hex digest (96 chars) of the function's compiled bytecode.</td><td class="fn-r">string</td></tr>
+        <tr><td class="fn-n">hookfunction</td><td class="fn-s">hookfunction(fn, hook)</td><td class="fn-d">Replaces <em>fn</em> with <em>hook</em> globally. Returns original function for passthrough calls.</td><td class="fn-r">function</td></tr>
+        <tr><td class="fn-n">hookmetamethod</td><td class="fn-s">hookmetamethod(obj, mm, hook)</td><td class="fn-d">Hooks the metamethod <em>mm</em> on obj's metatable. Returns original metamethod.</td><td class="fn-r">function</td></tr>
+        <tr><td class="fn-n">iscclosure</td><td class="fn-s">iscclosure(fn)</td><td class="fn-d">Returns true if fn is a C-level closure (native function).</td><td class="fn-r">boolean</td></tr>
+        <tr><td class="fn-n">isexecutorclosure</td><td class="fn-s">isexecutorclosure(fn)</td><td class="fn-d">Returns true if fn was defined in the executor context.</td><td class="fn-r">boolean</td></tr>
+        <tr><td class="fn-n">islclosure</td><td class="fn-s">islclosure(fn)</td><td class="fn-d">Returns true if fn is a Luau closure.</td><td class="fn-r">boolean</td></tr>
+        <tr><td class="fn-n">loadstring</td><td class="fn-s">loadstring(src, chunkname?)</td><td class="fn-d">Compiles Luau source into a callable function. Errors on raw bytecode input. Returns function + optional error.</td><td class="fn-r">function?, string?</td></tr>
+        <tr><td class="fn-n">newcclosure</td><td class="fn-s">newcclosure(fn)</td><td class="fn-d">Wraps a Luau function as a C closure. iscclosure() will return true on the result.</td><td class="fn-r">function</td></tr>
+        <tr><td class="fn-n">restorefunction</td><td class="fn-s">restorefunction(fn)</td><td class="fn-d">Strips all hooks from <em>fn</em>, restoring its original implementation.</td><td class="fn-r">void</td></tr>
+      </table>
+    </section>
+
+    <!-- ═══ sUNC DRAWING ═══ -->
+    <section id="sunc-drawing">
+      <div class="sh"><div class="si i-sunc">🎨</div><h2>sUNC — Drawing</h2><span class="sbadge" style="background:rgba(71,209,255,.1);color:var(--acc2)">sUNC</span></div>
+      <p>sUNC adds <code>getrenderproperty</code> and <code>setrenderproperty</code> as explicit tested functions alongside the standard <code>cleardrawcache</code> and <code>isrenderobj</code>.</p>
+      <table class="ft">
+        <tr><th>Function</th><th>Signature</th><th>Description</th><th>Returns</th></tr>
+        <tr><td class="fn-n">cleardrawcache</td><td class="fn-s">cleardrawcache()</td><td class="fn-d">Clears the internal renderer cache for all active Drawing objects.</td><td class="fn-r">void</td></tr>
+        <tr><td class="fn-n">isrenderobj</td><td class="fn-s">isrenderobj(obj)</td><td class="fn-d">Returns true if <em>obj</em> is an active Drawing render object (not yet destroyed).</td><td class="fn-r">boolean</td></tr>
+        <tr><td class="fn-n">getrenderproperty</td><td class="fn-s">getrenderproperty(obj, prop)</td><td class="fn-d">Reads a named property from a Drawing object (e.g. "Visible", "Color"). sUNC-specific.</td><td class="fn-r">any</td></tr>
+        <tr><td class="fn-n">setrenderproperty</td><td class="fn-s">setrenderproperty(obj, prop, val)</td><td class="fn-d">Sets a named property on a Drawing object. sUNC-specific. Equivalent to obj.Property = val but tested explicitly.</td><td class="fn-r">void</td></tr>
+      </table>
+      <div class="cb"><div class="ch"><div class="dots"><i></i><i></i><i></i></div><span>sUNC drawing property access</span></div>
+      <pre><code><span class="kw">local</span> <span class="var">circle</span> = Drawing.<span class="fn">new</span>(<span class="str">"Circle"</span>)
+<span class="fn">setrenderproperty</span>(<span class="var">circle</span>, <span class="str">"Radius"</span>, <span class="num">40</span>)
+<span class="fn">setrenderproperty</span>(<span class="var">circle</span>, <span class="str">"Color"</span>, Color3.fromRGB(<span class="num">0</span>, <span class="num">255</span>, <span class="num">128</span>))
+<span class="fn">setrenderproperty</span>(<span class="var">circle</span>, <span class="str">"Visible"</span>, <span class="kw">true</span>)
+
+<span class="fn">print</span>(<span class="fn">getrenderproperty</span>(<span class="var">circle</span>, <span class="str">"Radius"</span>)) <span class="cmt">-- 40</span>
+<span class="fn">print</span>(<span class="fn">isrenderobj</span>(<span class="var">circle</span>))                <span class="cmt">-- true</span></code></pre></div>
+    </section>
+
+    <!-- ═══ sUNC ENCODING ═══ -->
+    <section id="sunc-encoding">
+      <div class="sh"><div class="si i-sunc">📦</div><h2>sUNC — Encoding</h2><span class="sbadge" style="background:rgba(71,209,255,.1);color:var(--acc2)">sUNC</span></div>
+      <p>sUNC exposes Base64 and LZ4 as a first-class <strong>Encoding</strong> category with standalone global functions, distinct from UNC's <code>crypt.*</code> namespace.</p>
+      <table class="ft">
+        <tr><th>Function</th><th>Signature</th><th>Description</th><th>Returns</th></tr>
+        <tr><td class="fn-n">base64encode</td><td class="fn-s">base64encode(str)</td><td class="fn-d">Encodes a binary or UTF-8 string to Base64. Direct global — no crypt prefix required.</td><td class="fn-r">string</td></tr>
+        <tr><td class="fn-n">base64decode</td><td class="fn-s">base64decode(b64)</td><td class="fn-d">Decodes a Base64 string back to its original bytes.</td><td class="fn-r">string</td></tr>
+        <tr><td class="fn-n">lz4compress</td><td class="fn-s">lz4compress(data)</td><td class="fn-d">Compresses a string with LZ4 block compression. Returns compressed bytes.</td><td class="fn-r">string</td></tr>
+        <tr><td class="fn-n">lz4decompress</td><td class="fn-s">lz4decompress(data, origSize)</td><td class="fn-d">Decompresses LZ4 data given the original uncompressed size.</td><td class="fn-r">string</td></tr>
+      </table>
+      <div class="cb"><div class="ch"><div class="dots"><i></i><i></i><i></i></div><span>sUNC encoding example</span></div>
+      <pre><code><span class="kw">local</span> <span class="var">enc</span> = <span class="fn">base64encode</span>(<span class="str">"hello world"</span>)
+<span class="fn">print</span>(<span class="var">enc</span>)                          <span class="cmt">-- "aGVsbG8gd29ybGQ="</span>
+<span class="fn">print</span>(<span class="fn">base64decode</span>(<span class="var">enc</span>))            <span class="cmt">-- "hello world"</span>
+
+<span class="kw">local</span> <span class="var">data</span> = <span class="str">"aaaaaaaaaaaaaaaaaaa"</span>
+<span class="kw">local</span> <span class="var">compressed</span> = <span class="fn">lz4compress</span>(<span class="var">data</span>)
+<span class="fn">print</span>(<span class="fn">lz4decompress</span>(<span class="var">compressed</span>, #<span class="var">data</span>)) <span class="cmt">-- original string</span></code></pre></div>
+    </section>
+
+    <!-- ═══ sUNC ENVIRONMENT ═══ -->
+    <section id="sunc-env">
+      <div class="sh"><div class="si i-sunc">🌍</div><h2>sUNC — Environment</h2><span class="sbadge" style="background:rgba(71,209,255,.1);color:var(--acc2)">sUNC</span></div>
+      <table class="ft">
+        <tr><th>Function</th><th>Signature</th><th>Description</th><th>Returns</th></tr>
+        <tr><td class="fn-n">getgc</td><td class="fn-s">getgc(includeTables?)</td><td class="fn-d">Returns all values tracked by the Lua garbage collector. Pass true to include tables.</td><td class="fn-r">table</td></tr>
+        <tr><td class="fn-n">getgenv</td><td class="fn-s">getgenv()</td><td class="fn-d">Returns the executor global environment shared by all executor scripts.</td><td class="fn-r">table</td></tr>
+        <tr><td class="fn-n">getreg</td><td class="fn-s">getreg()</td><td class="fn-d">Returns the raw Lua registry. sUNC prefers the alias <code>getreg</code> over <code>getregistry</code>.</td><td class="fn-r">table</td></tr>
+        <tr><td class="fn-n">getrenv</td><td class="fn-s">getrenv()</td><td class="fn-d">Returns the Roblox game global environment, separate from the executor's.</td><td class="fn-r">table</td></tr>
+        <tr><td class="fn-n">filtergc</td><td class="fn-s">filtergc(type, opts)</td><td class="fn-d">Filters the GC by type ("function" or "table") and an options table. More efficient than iterating getgc() manually.</td><td class="fn-r">table</td></tr>
+      </table>
+      <h4>filtergc Options — Functions</h4>
+      <table class="ct">
+        <tr><th>Option</th><th>Type</th><th>Description</th></tr>
+        <tr><td>Name</td><td>string</td><td>Match functions whose debug name equals this.</td></tr>
+        <tr><td>Constants</td><td>table</td><td>Match functions containing all listed constants.</td></tr>
+        <tr><td>Upvalues</td><td>table</td><td>Match functions with these upvalue names.</td></tr>
+        <tr><td>Hash</td><td>string</td><td>Match by getfunctionhash result.</td></tr>
+        <tr><td>IgnoreExecutor</td><td>boolean</td><td>Skip executor-owned functions when true (default true).</td></tr>
+      </table>
+      <h4>filtergc Options — Tables</h4>
+      <table class="ct">
+        <tr><th>Option</th><th>Type</th><th>Description</th></tr>
+        <tr><td>Keys</td><td>table</td><td>Table must contain all listed keys.</td></tr>
+        <tr><td>Values</td><td>table</td><td>Table must contain all listed values.</td></tr>
+        <tr><td>KeyValuePairs</td><td>table</td><td>Table must contain all listed key-value pairs.</td></tr>
+        <tr><td>Metatable</td><td>table</td><td>Table's metatable must match this table.</td></tr>
+      </table>
+      <div class="cb"><div class="ch"><div class="dots"><i></i><i></i><i></i></div><span>filtergc examples</span></div>
+      <pre><code><span class="cmt">-- Find all functions with a specific constant string</span>
+<span class="kw">local</span> <span class="var">results</span> = <span class="fn">filtergc</span>(<span class="str">"function"</span>, {
+    Constants = { <span class="str">"SuperSecretKey"</span> },
+    IgnoreExecutor = <span class="kw">true</span>,
+})
+<span class="fn">print</span>(#<span class="var">results</span>, <span class="str">"functions found"</span>)
+
+<span class="cmt">-- Find tables with specific key-value pairs</span>
+<span class="kw">local</span> <span class="var">tables</span> = <span class="fn">filtergc</span>(<span class="str">"table"</span>, {
+    KeyValuePairs = { IsAdmin = <span class="kw">true</span> },
+})
+<span class="fn">print</span>(#<span class="var">tables</span>, <span class="str">"admin tables found"</span>)</code></pre></div>
+    </section>
+
+    <!-- ═══ sUNC INSTANCES ═══ -->
+    <section id="sunc-instances">
+      <div class="sh"><div class="si i-sunc">🧱</div><h2>sUNC — Instances</h2><span class="sbadge" style="background:rgba(71,209,255,.1);color:var(--acc2)">sUNC</span></div>
+      <table class="ft">
+        <tr><th>Function</th><th>Signature</th><th>Description</th><th>Returns</th></tr>
+        <tr><td class="fn-n">cloneref</td><td class="fn-s">cloneref(inst)</td><td class="fn-d">Returns a new pointer-unequal reference to the same Instance. Useful for bypassing reference-equality checks.</td><td class="fn-r">Instance</td></tr>
+        <tr><td class="fn-n">compareinstances</td><td class="fn-s">compareinstances(a, b)</td><td class="fn-d">Returns true when two references point to the same underlying Instance regardless of pointer equality.</td><td class="fn-r">boolean</td></tr>
+        <tr><td class="fn-n">fireclickdetector</td><td class="fn-s">fireclickdetector(detector, distance?, event?)</td><td class="fn-d">Triggers a ClickDetector as if the local player clicked it. event defaults to "MouseClick".</td><td class="fn-r">void</td></tr>
+        <tr><td class="fn-n">fireproximityprompt</td><td class="fn-s">fireproximityprompt(prompt)</td><td class="fn-d">Triggers a ProximityPrompt regardless of distance or obstructions.</td><td class="fn-r">void</td></tr>
+        <tr><td class="fn-n">firetouchinterest</td><td class="fn-s">firetouchinterest(part, target, toggle)</td><td class="fn-d">Simulates a touch event between two parts. toggle 0 = touch begin, 1 = touch end.</td><td class="fn-r">void</td></tr>
+        <tr><td class="fn-n">getcallbackvalue</td><td class="fn-s">getcallbackvalue(inst, prop)</td><td class="fn-d">Retrieves the function bound to a callback property (e.g. BindableFunction.OnInvoke).</td><td class="fn-r">function?</td></tr>
+        <tr><td class="fn-n">gethui</td><td class="fn-s">gethui()</td><td class="fn-d">Returns the executor's hidden ScreenGui container, invisible to game scripts.</td><td class="fn-r">Instance</td></tr>
+        <tr><td class="fn-n">getinstances</td><td class="fn-s">getinstances()</td><td class="fn-d">Returns every Instance known to the client VM, including nil-parented ones.</td><td class="fn-r">{Instance}</td></tr>
+        <tr><td class="fn-n">getnilinstances</td><td class="fn-s">getnilinstances()</td><td class="fn-d">Returns only Instances whose Parent is nil but remain in memory.</td><td class="fn-r">{Instance}</td></tr>
+      </table>
+    </section>
+
+    <!-- ═══ sUNC METATABLE ═══ -->
+    <section id="sunc-metatable">
+      <div class="sh"><div class="si i-sunc">🔩</div><h2>sUNC — Metatable</h2><span class="sbadge" style="background:rgba(71,209,255,.1);color:var(--acc2)">sUNC</span></div>
+      <table class="ft">
+        <tr><th>Function</th><th>Signature</th><th>Description</th><th>Returns</th></tr>
+        <tr><td class="fn-n">getnamecallmethod</td><td class="fn-s">getnamecallmethod()</td><td class="fn-d">Inside a __namecall hook, returns the method name string (e.g. "FireServer", "GetService").</td><td class="fn-r">string</td></tr>
+        <tr><td class="fn-n">getrawmetatable</td><td class="fn-s">getrawmetatable(obj)</td><td class="fn-d">Returns the raw metatable of any value, bypassing __metatable protection.</td><td class="fn-r">table</td></tr>
+        <tr><td class="fn-n">isreadonly</td><td class="fn-s">isreadonly(t)</td><td class="fn-d">Returns true if the table is frozen (read-only).</td><td class="fn-r">boolean</td></tr>
+        <tr><td class="fn-n">setrawmetatable</td><td class="fn-s">setrawmetatable(obj, mt)</td><td class="fn-d">Sets the raw metatable, bypassing __metatable lock.</td><td class="fn-r">obj</td></tr>
+        <tr><td class="fn-n">setreadonly</td><td class="fn-s">setreadonly(t, state)</td><td class="fn-d">Toggles the frozen/read-only state of a table.</td><td class="fn-r">void</td></tr>
+      </table>
+    </section>
+
+    <!-- ═══ sUNC REFLECTION ═══ -->
+    <section id="sunc-reflection">
+      <div class="sh"><div class="si i-sunc">🔭</div><h2>sUNC — Reflection</h2><span class="sbadge" style="background:rgba(71,209,255,.1);color:var(--acc2)">sUNC</span></div>
+      <table class="ft">
+        <tr><th>Function</th><th>Signature</th><th>Description</th><th>Returns</th></tr>
+        <tr><td class="fn-n">gethiddenproperty</td><td class="fn-s">gethiddenproperty(inst, prop)</td><td class="fn-d">Reads a non-scriptable property from an Instance. Returns the value and a boolean indicating whether it was hidden.</td><td class="fn-r">any, boolean</td></tr>
+        <tr><td class="fn-n">getthreadidentity</td><td class="fn-s">getthreadidentity()</td><td class="fn-d">Returns the script identity level of the current thread (2 for LocalScript, 8 for executor).</td><td class="fn-r">number</td></tr>
+        <tr><td class="fn-n">isscriptable</td><td class="fn-s">isscriptable(inst, prop)</td><td class="fn-d">Returns true if <em>prop</em> is accessible via normal Luau scripting on <em>inst</em>.</td><td class="fn-r">boolean</td></tr>
+        <tr><td class="fn-n">sethiddenproperty</td><td class="fn-s">sethiddenproperty(inst, prop, val)</td><td class="fn-d">Writes to a non-scriptable property. Returns whether the property was previously hidden.</td><td class="fn-r">boolean</td></tr>
+        <tr><td class="fn-n">setscriptable</td><td class="fn-s">setscriptable(inst, prop, state)</td><td class="fn-d">Enables or disables scriptability of <em>prop</em> on <em>inst</em>. Returns previous scriptable state.</td><td class="fn-r">boolean</td></tr>
+        <tr><td class="fn-n">setthreadidentity</td><td class="fn-s">setthreadidentity(level)</td><td class="fn-d">Sets the current thread's script identity (2–8). Changes what privileged APIs are accessible.</td><td class="fn-r">void</td></tr>
+      </table>
+    </section>
+
+    <!-- ═══ sUNC SCRIPTS ═══ -->
+    <section id="sunc-scripts">
+      <div class="sh"><div class="si i-sunc">📜</div><h2>sUNC — Scripts</h2><span class="sbadge" style="background:rgba(71,209,255,.1);color:var(--acc2)">sUNC</span></div>
+      <table class="ft">
+        <tr><th>Function</th><th>Signature</th><th>Description</th><th>Returns</th></tr>
+        <tr><td class="fn-n">getcallingscript</td><td class="fn-s">getcallingscript()</td><td class="fn-d">Returns the script Instance that is currently invoking this call, or nil if called from executor root.</td><td class="fn-r">Instance?</td></tr>
+        <tr><td class="fn-n">getloadedmodules</td><td class="fn-s">getloadedmodules()</td><td class="fn-d">Returns all ModuleScripts currently held in the Luau require cache.</td><td class="fn-r">{ModuleScript}</td></tr>
+        <tr><td class="fn-n">getrunningscripts</td><td class="fn-s">getrunningscripts()</td><td class="fn-d">Returns all scripts (LocalScript + ModuleScript) actively running on the client.</td><td class="fn-r">{Instance}</td></tr>
+        <tr><td class="fn-n">getscriptbytecode</td><td class="fn-s">getscriptbytecode(script)</td><td class="fn-d">Returns the compiled Luau bytecode for the given script Instance.</td><td class="fn-r">string</td></tr>
+        <tr><td class="fn-n">getscriptclosure</td><td class="fn-s">getscriptclosure(script)</td><td class="fn-d">Returns the top-level closure function of a script. Tested as a core function in sUNC (optional in UNC).</td><td class="fn-r">function</td></tr>
+        <tr><td class="fn-n">getscripthash</td><td class="fn-s">getscripthash(script)</td><td class="fn-d">Returns a hash of the script's bytecode/source. Changes if the script content changes.</td><td class="fn-r">string</td></tr>
+        <tr><td class="fn-n">getscripts</td><td class="fn-s">getscripts()</td><td class="fn-d">Returns all script instances (LocalScript and ModuleScript) present in the game.</td><td class="fn-r">{Instance}</td></tr>
+        <tr><td class="fn-n">getsenv</td><td class="fn-s">getsenv(script)</td><td class="fn-d">Returns the environment table of a running script, exposing its globals and upvalues.</td><td class="fn-r">table</td></tr>
+        <tr><td class="fn-n">loadstring</td><td class="fn-s">loadstring(src, chunkname?)</td><td class="fn-d">Compiles source code and returns a callable function. Also listed under Closures.</td><td class="fn-r">function?, string?</td></tr>
+      </table>
+    </section>
+
+    <!-- ═══ sUNC SIGNALS ═══ -->
+    <section id="sunc-signals">
+      <div class="sh"><div class="si i-sunc">📡</div><h2>sUNC — Signals</h2><span class="sbadge" style="background:rgba(71,209,255,.1);color:var(--acc2)">sUNC</span></div>
+      <p>sUNC adds <code>replicatesignal</code>, a function not present in classic UNC, which allows replicating certain client signals to the server.</p>
+      <table class="ft">
+        <tr><th>Function</th><th>Signature</th><th>Description</th><th>Returns</th></tr>
+        <tr><td class="fn-n">firesignal</td><td class="fn-s">firesignal(signal, ...)</td><td class="fn-d">Fires all connections of an RBXScriptSignal locally with the given arguments.</td><td class="fn-r">void</td></tr>
+        <tr><td class="fn-n">getconnections</td><td class="fn-s">getconnections(signal)</td><td class="fn-d">Returns a table of connection objects for the signal, each with: Enabled, Function, Thread, Fire, Disconnect, Disable, Enable.</td><td class="fn-r">table</td></tr>
+        <tr><td class="fn-n">replicatesignal</td><td class="fn-s">replicatesignal(signal, ...)</td><td class="fn-d">Replicates a signal to the server with the provided arguments. Arguments must match the signal's required structure or an error is thrown. <strong>sUNC-exclusive.</strong></td><td class="fn-r">void</td></tr>
+      </table>
+      <div class="co warn"><span class="ci">⚠️</span><div><strong>replicatesignal</strong> requires correct argument types matching the signal. Incorrect arguments throw an error. Consult the <a href="https://robloxapi.github.io/ref/" target="_blank">Roblox API reference</a> for each signal's expected argument structure.</div></div>
+      <div class="cb"><div class="ch"><div class="dots"><i></i><i></i><i></i></div><span>replicatesignal example</span></div>
+      <pre><code><span class="cmt">-- Replicate a ClickDetector click to the server</span>
+<span class="kw">local</span> <span class="var">det</span> = workspace.SomePart.ClickDetector
+<span class="fn">replicatesignal</span>(<span class="var">det</span>.MouseActionReplicated, game.Players.LocalPlayer, <span class="num">0</span>)
+
+<span class="cmt">-- Replicate a GUI MouseWheelForward event</span>
+<span class="kw">local</span> <span class="var">frame</span> = game.Players.LocalPlayer.PlayerGui.ScreenGui.Frame
+<span class="fn">replicatesignal</span>(<span class="var">frame</span>.MouseWheelForward, <span class="num">121</span>, <span class="num">214</span>) <span class="cmt">-- x, y required</span></code></pre></div>
+    </section>
+
+    <!-- ═══ sUNC WEBSOCKET ═══ -->
+    <section id="sunc-ws">
+      <div class="sh"><div class="si i-sunc">🔌</div><h2>sUNC — WebSocket</h2><span class="sbadge" style="background:rgba(71,209,255,.1);color:var(--acc2)">sUNC</span></div>
+      <p>sUNC explicitly tests <code>WebSocket.connect</code> with a secure <code>wss://</code> URL. Both secure and insecure connections must be supported.</p>
+      <table class="ft">
+        <tr><th>Member</th><th>Kind</th><th>Description</th><th>Returns</th></tr>
+        <tr><td class="fn-n">WebSocket.connect</td><td class="fn-s">Constructor</td><td class="fn-d">Connects to a WebSocket server. URL must start with <code>ws://</code> or <code>wss://</code>. sUNC tests the secure variant explicitly.</td><td class="fn-r">WebSocket</td></tr>
+        <tr><td class="fn-n">ws:Send(msg)</td><td class="fn-s">Method</td><td class="fn-d">Sends a UTF-8 string message to the connected server.</td><td class="fn-r">void</td></tr>
+        <tr><td class="fn-n">ws:Close()</td><td class="fn-s">Method</td><td class="fn-d">Closes the WebSocket connection. Triggers OnClose.</td><td class="fn-r">void</td></tr>
+        <tr><td class="fn-n">ws.OnMessage</td><td class="fn-s">Event</td><td class="fn-d">Fires when a message is received. Callback receives a single string parameter.</td><td class="fn-r">—</td></tr>
+        <tr><td class="fn-n">ws.OnClose</td><td class="fn-s">Event</td><td class="fn-d">Fires when the connection closes (by either side). No parameters.</td><td class="fn-r">—</td></tr>
+      </table>
+      <div class="cb"><div class="ch"><div class="dots"><i></i><i></i><i></i></div><span>sUNC WebSocket echo example</span></div>
+      <pre><code><span class="kw">local</span> <span class="var">ws</span> = WebSocket.<span class="fn">connect</span>(<span class="str">"wss://ws.postman-echo.com/raw"</span>)
+
+<span class="var">ws</span>.OnMessage:<span class="fn">Connect</span>(<span class="kw">function</span>(<span class="var">message</span>)
+    <span class="fn">print</span>(<span class="str">"Echo:"</span>, <span class="var">message</span>)
+<span class="kw">end</span>)
+
+<span class="var">ws</span>.OnClose:<span class="fn">Connect</span>(<span class="kw">function</span>()
+    <span class="fn">print</span>(<span class="str">"Connection closed."</span>)
+<span class="kw">end</span>)
+
+<span class="var">ws</span>:<span class="fn">Send</span>(<span class="str">"Hello"</span>) <span class="cmt">-- Output: Echo: Hello</span>
+task.<span class="fn">wait</span>(<span class="num">0.5</span>)
+<span class="var">ws</span>:<span class="fn">Close</span>()    <span class="cmt">-- Output: Connection closed.</span></code></pre></div>
+    </section>
+
+    <hr/>
+
+    <!-- ═══════════════ ROBLOX LOCAL-SIDE API ═══════════════ -->
+    <section id="local-fns">
+      <div class="sh"><div class="si i-loc">🖥️</div><h2>Roblox — Client-Side (LocalScript) API</h2><span class="sbadge" style="background:rgba(255,107,107,.1);color:var(--acc3)">Client Only</span></div>
+      <p>These are Roblox services and functions available exclusively (or primarily) in a LocalScript context. They interact with the local player, input, camera, and GUI.</p>
+      <div class="co warn"><span class="ci">⚠️</span><div>These are standard Roblox APIs, not executor APIs. They run at identity level 2 with no executor privileges.</div></div>
+
+      <h3>Players.LocalPlayer</h3>
+      <table class="ft">
+        <tr><th>Property / Method</th><th>Description</th><th>Returns</th></tr>
+        <tr><td class="fn-n">Players.LocalPlayer</td><td class="fn-d">The Player object for the client running this script. nil on server.</td><td class="fn-r">Player</td></tr>
+        <tr><td class="fn-n">player.Character</td><td class="fn-d">The character Model in workspace. May be nil before spawn.</td><td class="fn-r">Model?</td></tr>
+        <tr><td class="fn-n">player.CharacterAdded</td><td class="fn-d">Event that fires when a new character is added (respawn).</td><td class="fn-r">Signal</td></tr>
+        <tr><td class="fn-n">player.CharacterRemoving</td><td class="fn-d">Event that fires when the character is about to be removed (death).</td><td class="fn-r">Signal</td></tr>
+        <tr><td class="fn-n">player.PlayerGui</td><td class="fn-d">GUI container for this player. Contains clones of StarterGui.</td><td class="fn-r">PlayerGui</td></tr>
+        <tr><td class="fn-n">player.Backpack</td><td class="fn-d">Container for the player's tools/inventory items.</td><td class="fn-r">Backpack</td></tr>
+        <tr><td class="fn-n">player:GetMouse()</td><td class="fn-d">Returns the Mouse object for this player. Use UserInputService instead for new code.</td><td class="fn-r">Mouse</td></tr>
+        <tr><td class="fn-n">player.CameraMode</td><td class="fn-d">Enum.CameraMode value controlling camera behavior.</td><td class="fn-r">Enum.CameraMode</td></tr>
+      </table>
+
+      <h3>UserInputService</h3>
+      <table class="ft">
+        <tr><th>Function / Event</th><th>Description</th><th>Returns</th></tr>
+        <tr><td class="fn-n">UIS.InputBegan</td><td class="fn-d">Fires when a key, mouse button, or touch begins. Args: (InputObject, gameProcessed).</td><td class="fn-r">Signal</td></tr>
+        <tr><td class="fn-n">UIS.InputEnded</td><td class="fn-d">Fires when a key, mouse button, or touch ends.</td><td class="fn-r">Signal</td></tr>
+        <tr><td class="fn-n">UIS.InputChanged</td><td class="fn-d">Fires when mouse moves, scroll wheel, thumbstick changes, etc.</td><td class="fn-r">Signal</td></tr>
+        <tr><td class="fn-n">UIS:IsKeyDown(key)</td><td class="fn-d">Returns true if a keyboard key is currently held. Takes Enum.KeyCode.</td><td class="fn-r">boolean</td></tr>
+        <tr><td class="fn-n">UIS:IsMouseButtonPressed(btn)</td><td class="fn-d">Returns true if a mouse button is currently held.</td><td class="fn-r">boolean</td></tr>
+        <tr><td class="fn-n">UIS:GetMouseLocation()</td><td class="fn-d">Returns the current cursor position in screen-space pixels.</td><td class="fn-r">Vector2</td></tr>
+        <tr><td class="fn-n">UIS:GetKeysPressed()</td><td class="fn-d">Returns a table of all InputObjects currently pressed.</td><td class="fn-r">{InputObject}</td></tr>
+        <tr><td class="fn-n">UIS.MouseBehavior</td><td class="fn-d">Controls mouse lock mode. Enum.MouseBehavior.LockCenter etc.</td><td class="fn-r">Enum.MouseBehavior</td></tr>
+        <tr><td class="fn-n">UIS.MouseIconEnabled</td><td class="fn-d">Whether the mouse cursor is visible.</td><td class="fn-r">boolean</td></tr>
+        <tr><td class="fn-n">UIS.TouchEnabled</td><td class="fn-d">True on touch-input devices (mobile).</td><td class="fn-r">boolean</td></tr>
+        <tr><td class="fn-n">UIS.GamepadEnabled</td><td class="fn-d">True if a gamepad is connected.</td><td class="fn-r">boolean</td></tr>
+      </table>
+
+      <h3>Camera</h3>
+      <table class="ft">
+        <tr><th>Property / Method</th><th>Description</th><th>Returns</th></tr>
+        <tr><td class="fn-n">workspace.CurrentCamera</td><td class="fn-d">The active Camera object for this client.</td><td class="fn-r">Camera</td></tr>
+        <tr><td class="fn-n">camera.CFrame</td><td class="fn-d">The Camera's current position and orientation.</td><td class="fn-r">CFrame</td></tr>
+        <tr><td class="fn-n">camera.CameraType</td><td class="fn-d">Enum.CameraType — Scriptable, Custom, Follow, etc.</td><td class="fn-r">Enum.CameraType</td></tr>
+        <tr><td class="fn-n">camera:WorldToScreenPoint(pos)</td><td class="fn-d">Converts a 3D world position to 2D screen coordinates + depth + visibility.</td><td class="fn-r">Vector2, number, boolean</td></tr>
+        <tr><td class="fn-n">camera:WorldToViewportPoint(pos)</td><td class="fn-d">Like WorldToScreenPoint but uses viewport size, not GUI inset.</td><td class="fn-r">Vector2, number, boolean</td></tr>
+        <tr><td class="fn-n">camera:ScreenPointToRay(x,y,depth)</td><td class="fn-d">Returns a Ray from the camera through screen coordinate (x,y).</td><td class="fn-r">Ray</td></tr>
+        <tr><td class="fn-n">camera.FieldOfView</td><td class="fn-d">Camera FOV in degrees. Default 70.</td><td class="fn-r">number</td></tr>
+        <tr><td class="fn-n">camera.ViewportSize</td><td class="fn-d">The screen resolution as a Vector2.</td><td class="fn-r">Vector2</td></tr>
+      </table>
+
+      <h3>GuiService &amp; TweenService (Client)</h3>
+      <table class="ft">
+        <tr><th>Function</th><th>Description</th><th>Returns</th></tr>
+        <tr><td class="fn-n">GuiService:GetGuiInset()</td><td class="fn-d">Returns top and bottom GUI inset vectors (for safe-area layout).</td><td class="fn-r">Vector2, Vector2</td></tr>
+        <tr><td class="fn-n">TweenService:Create(obj, info, goals)</td><td class="fn-d">Creates a Tween to animate <em>obj</em> properties to <em>goals</em> using TweenInfo.</td><td class="fn-r">Tween</td></tr>
+        <tr><td class="fn-n">tween:Play()</td><td class="fn-d">Starts the tween animation.</td><td class="fn-r">void</td></tr>
+        <tr><td class="fn-n">tween:Pause()</td><td class="fn-d">Pauses the tween mid-animation.</td><td class="fn-r">void</td></tr>
+        <tr><td class="fn-n">tween:Cancel()</td><td class="fn-d">Cancels and resets the tween.</td><td class="fn-r">void</td></tr>
+        <tr><td class="fn-n">tween.Completed</td><td class="fn-d">Fires when the tween finishes. Passes Enum.PlaybackState.</td><td class="fn-r">Signal</td></tr>
+      </table>
+
+      <h3>RunService (Client Events)</h3>
+      <table class="ft">
+        <tr><th>Event</th><th>Description</th><th>Args</th></tr>
+        <tr><td class="fn-n">RunService.RenderStepped</td><td class="fn-d">Fires every frame before rendering. Client only. High frequency — keep lightweight.</td><td class="fn-r">deltaTime</td></tr>
+        <tr><td class="fn-n">RunService.Heartbeat</td><td class="fn-d">Fires every frame after physics step. Available on both client and server.</td><td class="fn-r">deltaTime</td></tr>
+        <tr><td class="fn-n">RunService.Stepped</td><td class="fn-d">Fires every physics simulation step. Client + server.</td><td class="fn-r">time, deltaTime</td></tr>
+        <tr><td class="fn-n">RunService:IsClient()</td><td class="fn-d">Returns true if running in a LocalScript context.</td><td class="fn-r">boolean</td></tr>
+        <tr><td class="fn-n">RunService:IsStudio()</td><td class="fn-d">Returns true if running inside Roblox Studio.</td><td class="fn-r">boolean</td></tr>
+      </table>
+
+      <h3>Common Client-Side Patterns</h3>
+      <div class="cb"><div class="ch"><div class="dots"><i></i><i></i><i></i></div><span>LocalScript — camera ESP projection</span></div>
+      <pre><code><span class="kw">local</span> <span class="var">RS</span>  = game:<span class="fn">GetService</span>(<span class="str">"RunService"</span>)
+<span class="kw">local</span> <span class="var">cam</span> = workspace.CurrentCamera
+
+<span class="var">RS</span>.RenderStepped:<span class="fn">Connect</span>(<span class="kw">function</span>()
+    <span class="kw">for</span> _, <span class="var">player</span> <span class="kw">in</span> game.Players:<span class="fn">GetPlayers</span>() <span class="kw">do</span>
+        <span class="kw">if</span> <span class="var">player</span> == game.Players.LocalPlayer <span class="kw">then</span> <span class="kw">continue</span> <span class="kw">end</span>
+        <span class="kw">local</span> <span class="var">char</span> = <span class="var">player</span>.Character
+        <span class="kw">if</span> <span class="kw">not</span> <span class="var">char</span> <span class="kw">then</span> <span class="kw">continue</span> <span class="kw">end</span>
+        <span class="kw">local</span> <span class="var">root</span> = <span class="var">char</span>:FindFirstChild(<span class="str">"HumanoidRootPart"</span>)
+        <span class="kw">if</span> <span class="kw">not</span> <span class="var">root</span> <span class="kw">then</span> <span class="kw">continue</span> <span class="kw">end</span>
+        <span class="kw">local</span> <span class="var">screenPos</span>, <span class="var">depth</span>, <span class="var">visible</span> =
+            <span class="var">cam</span>:<span class="fn">WorldToViewportPoint</span>(<span class="var">root</span>.Position)
+        <span class="kw">if</span> <span class="var">visible</span> <span class="kw">then</span>
+            <span class="cmt">-- draw ESP at screenPos.X, screenPos.Y</span>
+        <span class="kw">end</span>
+    <span class="kw">end</span>
+<span class="kw">end</span>)</code></pre></div>
+
+      <div class="cb"><div class="ch"><div class="dots"><i></i><i></i><i></i></div><span>LocalScript — RemoteEvent listener</span></div>
+      <pre><code><span class="kw">local</span> <span class="var">remote</span> = game.ReplicatedStorage:<span class="fn">WaitForChild</span>(<span class="str">"UpdateHealth"</span>)
+<span class="var">remote</span>.OnClientEvent:<span class="fn">Connect</span>(<span class="kw">function</span>(<span class="var">newHp</span>)
+    <span class="cmt">-- Update client-side health bar UI</span>
+    <span class="kw">local</span> <span class="var">bar</span> = game.Players.LocalPlayer.PlayerGui.HUD.HealthBar
+    <span class="var">bar</span>.Size = UDim2.<span class="fn">new</span>(<span class="var">newHp</span> / <span class="num">100</span>, <span class="num">0</span>, <span class="num">1</span>, <span class="num">0</span>)
+<span class="kw">end</span>)</code></pre></div>
+    </section>
+
+    <!-- ═══════════════ ROBLOX SERVER-SIDE API ═══════════════ -->
+    <section id="server-fns">
+      <div class="sh"><div class="si i-srv">🌐</div><h2>Roblox — Server-Side (Script) API</h2><span class="sbadge" style="background:rgba(61,255,176,.1);color:var(--acc5)">Server Only</span></div>
+      <p>These services and patterns are used in a server <strong>Script</strong> placed in <code>ServerScriptService</code>. They have authoritative access over game state, persistence, and all players.</p>
+
+      <h3>DataStoreService</h3>
+      <table class="ft">
+        <tr><th>Function</th><th>Signature</th><th>Description</th><th>Returns</th></tr>
+        <tr><td class="fn-n">DSS:GetDataStore</td><td class="fn-s">GetDataStore(name, scope?)</td><td class="fn-d">Returns a DataStore object. Scoped stores isolate data under a namespace.</td><td class="fn-r">DataStore</td></tr>
+        <tr><td class="fn-n">DSS:GetOrderedDataStore</td><td class="fn-s">GetOrderedDataStore(name, scope?)</td><td class="fn-d">Returns an OrderedDataStore for sorted leaderboard-style data.</td><td class="fn-r">OrderedDataStore</td></tr>
+        <tr><td class="fn-n">ds:GetAsync</td><td class="fn-s">GetAsync(key)</td><td class="fn-d">Reads the value stored at <em>key</em>. Always wrap in pcall.</td><td class="fn-r">any</td></tr>
+        <tr><td class="fn-n">ds:SetAsync</td><td class="fn-s">SetAsync(key, value, userIds?, opts?)</td><td class="fn-d">Writes <em>value</em> to <em>key</em>. Overwrites any existing value.</td><td class="fn-r">void</td></tr>
+        <tr><td class="fn-n">ds:UpdateAsync</td><td class="fn-s">UpdateAsync(key, callback)</td><td class="fn-d">Atomic read-modify-write. Callback receives old value, returns new value. Return nil to cancel.</td><td class="fn-r">any</td></tr>
+        <tr><td class="fn-n">ds:RemoveAsync</td><td class="fn-s">RemoveAsync(key)</td><td class="fn-d">Deletes a key and returns the last stored value.</td><td class="fn-r">any</td></tr>
+        <tr><td class="fn-n">ds:IncrementAsync</td><td class="fn-s">IncrementAsync(key, delta?)</td><td class="fn-d">Atomically increments a numeric key by <em>delta</em> (default 1).</td><td class="fn-r">number</td></tr>
+        <tr><td class="fn-n">ds:ListKeysAsync</td><td class="fn-s">ListKeysAsync(prefix?, pageSize?)</td><td class="fn-d">Returns a DataStoreKeyPages for iterating all keys. <span class="opt">DataStore v2</span></td><td class="fn-r">DataStoreKeyPages</td></tr>
+        <tr><td class="fn-n">ds:GetVersionAsync</td><td class="fn-s">GetVersionAsync(key, version)</td><td class="fn-d">Retrieves a specific historical version of a key.</td><td class="fn-r">any, DataStoreKeyInfo</td></tr>
+      </table>
+
+      <h3>RemoteEvent &amp; RemoteFunction (Server)</h3>
+      <table class="ft">
+        <tr><th>Function / Event</th><th>Description</th><th>Notes</th></tr>
+        <tr><td class="fn-n">remote.OnServerEvent</td><td class="fn-d">Event that fires on the server when a client calls :FireServer(). First arg is the Player who fired it.</td><td class="fn-r">ALWAYS validate the player arg</td></tr>
+        <tr><td class="fn-n">remote:FireClient(player, ...)</td><td class="fn-d">Sends data to a specific client.</td><td class="fn-r">—</td></tr>
+        <tr><td class="fn-n">remote:FireAllClients(...)</td><td class="fn-d">Broadcasts data to all connected clients simultaneously.</td><td class="fn-r">—</td></tr>
+        <tr><td class="fn-n">remoteFunc.OnServerInvoke</td><td class="fn-d">Callback set server-side. Client's InvokeServer() call blocks until this returns.</td><td class="fn-r">Return value sent to client</td></tr>
+      </table>
+
+      <h3>Players Service (Server)</h3>
+      <table class="ft">
+        <tr><th>Function / Event</th><th>Description</th><th>Returns</th></tr>
+        <tr><td class="fn-n">Players.PlayerAdded</td><td class="fn-d">Fires when a player joins the server. Provides the Player object.</td><td class="fn-r">Signal(Player)</td></tr>
+        <tr><td class="fn-n">Players.PlayerRemoving</td><td class="fn-d">Fires just before a player leaves. Last chance to save data.</td><td class="fn-r">Signal(Player)</td></tr>
+        <tr><td class="fn-n">Players:GetPlayers()</td><td class="fn-d">Returns an array of all currently connected Player objects.</td><td class="fn-r">{Player}</td></tr>
+        <tr><td class="fn-n">Players:GetPlayerByUserId(id)</td><td class="fn-d">Returns a Player object for the given UserId, or nil if not present.</td><td class="fn-r">Player?</td></tr>
+        <tr><td class="fn-n">player:Kick(reason?)</td><td class="fn-d">Removes a player from the server with an optional reason message.</td><td class="fn-r">void</td></tr>
+        <tr><td class="fn-n">player:GetRankInGroup(groupId)</td><td class="fn-d">Returns the player's rank (0–255) in the specified group.</td><td class="fn-r">number</td></tr>
+        <tr><td class="fn-n">player.UserId</td><td class="fn-d">The unique numeric ID of the player. Constant per account.</td><td class="fn-r">number</td></tr>
+        <tr><td class="fn-n">player.Name</td><td class="fn-d">The player's Roblox username.</td><td class="fn-r">string</td></tr>
+        <tr><td class="fn-n">player.Team</td><td class="fn-d">The Team this player is assigned to, or nil.</td><td class="fn-r">Team?</td></tr>
+      </table>
+
+      <h3>TeleportService (Server)</h3>
+      <table class="ft">
+        <tr><th>Function</th><th>Signature</th><th>Description</th><th>Returns</th></tr>
+        <tr><td class="fn-n">TeleportService:TeleportAsync</td><td class="fn-s">TeleportAsync(placeId, players, opts?)</td><td class="fn-d">Teleports a list of players to a place. Returns a TeleportAsyncResult.</td><td class="fn-r">TeleportAsyncResult</td></tr>
+        <tr><td class="fn-n">TeleportService:ReserveServer</td><td class="fn-s">ReserveServer(placeId)</td><td class="fn-d">Reserves a private server instance and returns an access code.</td><td class="fn-r">string (code), string (id)</td></tr>
+        <tr><td class="fn-n">TeleportService:TeleportToPrivateServer</td><td class="fn-s">TeleportToPrivateServer(placeId, code, players)</td><td class="fn-d">Teleports players to a previously reserved private server.</td><td class="fn-r">void</td></tr>
+      </table>
+
+      <h3>MessagingService &amp; MemoryStoreService</h3>
+      <table class="ft">
+        <tr><th>Function</th><th>Signature</th><th>Description</th><th>Returns</th></tr>
+        <tr><td class="fn-n">MSS:PublishAsync</td><td class="fn-s">PublishAsync(topic, message)</td><td class="fn-d">Publishes a message to a cross-server topic. All servers subscribed receive it.</td><td class="fn-r">void</td></tr>
+        <tr><td class="fn-n">MSS:SubscribeAsync</td><td class="fn-s">SubscribeAsync(topic, callback)</td><td class="fn-d">Subscribes to a topic. Callback receives (message, sent) on each publish.</td><td class="fn-r">RBXScriptConnection</td></tr>
+        <tr><td class="fn-n">MemStore:GetSortedMap</td><td class="fn-s">GetSortedMap(name)</td><td class="fn-d">Returns a MemoryStoreSortedMap for fast, ephemeral cross-server sorted data.</td><td class="fn-r">MemoryStoreSortedMap</td></tr>
+        <tr><td class="fn-n">MemStore:GetQueue</td><td class="fn-s">GetQueue(name, invis?)</td><td class="fn-d">Returns a MemoryStoreQueue for cross-server task queues.</td><td class="fn-r">MemoryStoreQueue</td></tr>
+      </table>
+
+      <h3>HttpService (Server)</h3>
+      <table class="ft">
+        <tr><th>Function</th><th>Signature</th><th>Description</th><th>Returns</th></tr>
+        <tr><td class="fn-n">HttpService:GetAsync</td><td class="fn-s">GetAsync(url, nocache?, headers?)</td><td class="fn-d">Makes an HTTP GET request. Requires HTTP access enabled in Game Settings.</td><td class="fn-r">string</td></tr>
+        <tr><td class="fn-n">HttpService:PostAsync</td><td class="fn-s">PostAsync(url, data, contentType?, compress?, headers?)</td><td class="fn-d">Makes an HTTP POST request.</td><td class="fn-r">string</td></tr>
+        <tr><td class="fn-n">HttpService:RequestAsync</td><td class="fn-s">RequestAsync(opts)</td><td class="fn-d">Full HTTP request (method, headers, body). Returns table with Success, StatusCode, Body, Headers.</td><td class="fn-r">table</td></tr>
+        <tr><td class="fn-n">HttpService:JSONEncode</td><td class="fn-s">JSONEncode(value)</td><td class="fn-d">Serializes a Luau value to a JSON string.</td><td class="fn-r">string</td></tr>
+        <tr><td class="fn-n">HttpService:JSONDecode</td><td class="fn-s">JSONDecode(json)</td><td class="fn-d">Parses a JSON string into a Luau table/value.</td><td class="fn-r">any</td></tr>
+        <tr><td class="fn-n">HttpService:GenerateGUID</td><td class="fn-s">GenerateGUID(wrapInCurlyBraces?)</td><td class="fn-d">Returns a random GUID string, optionally wrapped in { }.</td><td class="fn-r">string</td></tr>
+      </table>
+
+      <h3>Server Script Patterns</h3>
+      <div class="cb"><div class="ch"><div class="dots"><i></i><i></i><i></i></div><span>Script — DataStore save on PlayerRemoving</span></div>
+      <pre><code><span class="kw">local</span> <span class="var">Players</span> = game:<span class="fn">GetService</span>(<span class="str">"Players"</span>)
+<span class="kw">local</span> <span class="var">DSS</span>     = game:<span class="fn">GetService</span>(<span class="str">"DataStoreService"</span>)
+<span class="kw">local</span> <span class="var">store</span>   = <span class="var">DSS</span>:<span class="fn">GetDataStore</span>(<span class="str">"PlayerData_v1"</span>)
+
+<span class="kw">local</span> <span class="var">playerData</span> = {}
+
+<span class="var">Players</span>.PlayerAdded:<span class="fn">Connect</span>(<span class="kw">function</span>(<span class="var">p</span>)
+    <span class="kw">local</span> <span class="var">ok</span>, <span class="var">saved</span> = <span class="fn">pcall</span>(<span class="var">store</span>.GetAsync, <span class="var">store</span>, <span class="var">p</span>.UserId)
+    <span class="var">playerData</span>[<span class="var">p</span>.UserId] = (<span class="var">ok</span> <span class="kw">and</span> <span class="var">saved</span>) <span class="op">or</span> { coins = <span class="num">0</span>, level = <span class="num">1</span> }
+<span class="kw">end</span>)
+
+<span class="var">Players</span>.PlayerRemoving:<span class="fn">Connect</span>(<span class="kw">function</span>(<span class="var">p</span>)
+    <span class="kw">local</span> <span class="var">data</span> = <span class="var">playerData</span>[<span class="var">p</span>.UserId]
+    <span class="kw">if</span> <span class="var">data</span> <span class="kw">then</span>
+        <span class="fn">pcall</span>(<span class="var">store</span>.SetAsync, <span class="var">store</span>, <span class="var">p</span>.UserId, <span class="var">data</span>)
+        <span class="var">playerData</span>[<span class="var">p</span>.UserId] = <span class="kw">nil</span>
+    <span class="kw">end</span>
+<span class="kw">end</span>)
+
+<span class="cmt">-- Prevent data loss on server shutdown</span>
+game:BindToClose(<span class="kw">function</span>()
+    <span class="kw">for</span> <span class="var">uid</span>, <span class="var">data</span> <span class="kw">in</span> <span class="var">playerData</span> <span class="kw">do</span>
+        <span class="fn">pcall</span>(<span class="var">store</span>.SetAsync, <span class="var">store</span>, <span class="var">uid</span>, <span class="var">data</span>)
+    <span class="kw">end</span>
+<span class="kw">end</span>)</code></pre></div>
+
+      <div class="cb"><div class="ch"><div class="dots"><i></i><i></i><i></i></div><span>Script — RemoteEvent with server-side validation</span></div>
+      <pre><code><span class="kw">local</span> <span class="var">remote</span> = game.ReplicatedStorage:<span class="fn">WaitForChild</span>(<span class="str">"BuyItem"</span>)
+
+<span class="var">remote</span>.OnServerEvent:<span class="fn">Connect</span>(<span class="kw">function</span>(<span class="var">player</span>, <span class="var">itemName</span>, <span class="var">price</span>)
+    <span class="cmt">-- ALWAYS validate types and sanity on the server</span>
+    <span class="kw">if</span> <span class="kw">type</span>(<span class="var">itemName</span>) ~= <span class="str">"string"</span> <span class="kw">then</span> <span class="kw">return</span> <span class="kw">end</span>
+    <span class="kw">if</span> <span class="kw">type</span>(<span class="var">price</span>) ~= <span class="str">"number"</span> <span class="op">or</span> <span class="var">price</span> &lt; <span class="num">0</span> <span class="kw">then</span> <span class="kw">return</span> <span class="kw">end</span>
+
+    <span class="kw">local</span> <span class="var">coins</span> = playerData[<span class="var">player</span>.UserId] <span class="kw">and</span> playerData[<span class="var">player</span>.UserId].coins <span class="op">or</span> <span class="num">0</span>
+    <span class="kw">if</span> <span class="var">coins</span> &gt;= <span class="var">price</span> <span class="kw">then</span>
+        playerData[<span class="var">player</span>.UserId].coins <span class="op">-=</span> <span class="var">price</span>
+        <span class="cmt">-- grant item to player ...</span>
+        game.ReplicatedStorage.PurchaseResult:<span class="fn">FireClient</span>(<span class="var">player</span>, <span class="kw">true</span>, <span class="str">"Purchased!"</span>)
+    <span class="kw">else</span>
+        game.ReplicatedStorage.PurchaseResult:<span class="fn">FireClient</span>(<span class="var">player</span>, <span class="kw">false</span>, <span class="str">"Not enough coins"</span>)
+    <span class="kw">end</span>
+<span class="kw">end</span>)</code></pre></div>
+
+      <div class="cb"><div class="ch"><div class="dots"><i></i><i></i><i></i></div><span>Script — Cross-server messaging</span></div>
+      <pre><code><span class="kw">local</span> <span class="var">MSS</span> = game:<span class="fn">GetService</span>(<span class="str">"MessagingService"</span>)
+
+<span class="cmt">-- Subscribe to a global broadcast topic</span>
+<span class="var">MSS</span>:<span class="fn">SubscribeAsync</span>(<span class="str">"GlobalAnnounce"</span>, <span class="kw">function</span>(<span class="var">msg</span>)
+    <span class="kw">for</span> _, <span class="var">player</span> <span class="kw">in</span> game.Players:<span class="fn">GetPlayers</span>() <span class="kw">do</span>
+        <span class="cmt">-- push msg.Data to each player's chat</span>
+    <span class="kw">end</span>
+<span class="kw">end</span>)
+
+<span class="cmt">-- Publish from any server</span>
+<span class="var">MSS</span>:<span class="fn">PublishAsync</span>(<span class="str">"GlobalAnnounce"</span>, <span class="str">"Server update in 5 minutes!"</span>)</code></pre></div>
+
+      <h3>Server vs Client — Quick Reference</h3>
+      <table class="ct">
+        <tr><th>API</th><th>LocalScript</th><th>ServerScript</th></tr>
+        <tr><td>DataStoreService</td><td class="no">✗</td><td class="yes">✓</td></tr>
+        <tr><td>MessagingService</td><td class="no">✗</td><td class="yes">✓</td></tr>
+        <tr><td>MemoryStoreService</td><td class="no">✗</td><td class="yes">✓</td></tr>
+        <tr><td>HttpService:GetAsync</td><td class="no">✗</td><td class="yes">✓</td></tr>
+        <tr><td>TeleportService:TeleportAsync</td><td class="part">Limited</td><td class="yes">✓ Full</td></tr>
+        <tr><td>Players.LocalPlayer</td><td class="yes">✓</td><td class="no">✗ nil</td></tr>
+        <tr><td>UserInputService</td><td class="yes">✓</td><td class="no">✗</td></tr>
+        <tr><td>RunService.RenderStepped</td><td class="yes">✓</td><td class="no">✗</td></tr>
+        <tr><td>workspace.CurrentCamera</td><td class="yes">✓</td><td class="no">✗</td></tr>
+        <tr><td>TweenService</td><td class="yes">✓ (visual)</td><td class="part">✓ (non-visual)</td></tr>
+        <tr><td>RemoteEvent:FireServer</td><td class="yes">✓</td><td class="no">✗</td></tr>
+        <tr><td>RemoteEvent:FireClient</td><td class="no">✗</td><td class="yes">✓</td></tr>
+        <tr><td>player:Kick()</td><td class="no">✗</td><td class="yes">✓</td></tr>
+        <tr><td>game:BindToClose()</td><td class="no">✗</td><td class="yes">✓</td></tr>
+      </table>
+    </section>
+
+  </main>
+</div>
+
+</body>
+</html>
